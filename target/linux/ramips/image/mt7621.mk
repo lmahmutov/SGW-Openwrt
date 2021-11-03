@@ -1181,6 +1181,16 @@ define Device/sercomm_na502
 endef
 TARGET_DEVICES += sercomm_na502
 
+define Device/smartgateway_sgw-1
+  $(Device/dsa-migration)
+  $(Device/uimage-lzma-loader)
+  IMAGE_SIZE := 32448k
+  DEVICE_VENDOR := SmartGateway
+  DEVICE_MODEL := SGW-1
+  DEVICE_PACKAGES := kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-sdhci-mt7620
+endef
+TARGET_DEVICES += smartgateway_sgw-1
+
 define Device/storylink_sap-g3200u3
   $(Device/dsa-migration)
   IMAGE_SIZE := 7872k

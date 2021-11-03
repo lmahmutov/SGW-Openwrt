@@ -133,6 +133,7 @@ ramips_setup_macs()
 		label_mac=$wan_mac
 		;;
 	jcg,y2|\
+	smartgateway,sgw-1|\
 	wavlink,wl-wn531a6|\
 	winstars,ws-wn583a6|\
 	zbtlink,zbt-we1326|\
