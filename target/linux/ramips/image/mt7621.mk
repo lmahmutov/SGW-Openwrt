@@ -1184,7 +1184,7 @@ TARGET_DEVICES += sercomm_na502
 define Device/smartgateway_sgw-1
   $(Device/dsa-migration)
   $(Device/uimage-lzma-loader)
-  IMAGE_SIZE := 32448k
+  IMAGE_SIZE := 16064k
   DEVICE_VENDOR := SmartGateway
   DEVICE_MODEL := SGW-1
   DEVICE_PACKAGES := kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-sdhci-mt7620
