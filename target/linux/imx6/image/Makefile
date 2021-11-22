@@ -238,4 +238,14 @@ define Device/apalis
 endef
 TARGET_DEVICES += apalis
 
+define Device/sgw-imx6
+  DEVICE_VENDOR := SmartGateway
+  DEVICE_MODEL := sgw-imx6
+  DEVICE_DTS := sgw-imx6
+    IMAGES := dtb
+    IMAGE/dtb := install-dtb 
+    KERNEL := kernel-bin | install-dtb
+endef
+TARGET_DEVICES += sgw-imx6
+
 $(eval $(call BuildImage))

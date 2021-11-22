@@ -68,6 +68,10 @@ define U-Boot/wandboard
   BUILD_DEVICES:=wandboard
 endef
 
+define U-Boot/sgw-imx6
+  NAME:=SmartGateway imx6
+endef
+
 UBOOT_TARGETS := \
 	apalis_imx6 \
 	mx6cuboxi \
@@ -78,7 +82,8 @@ UBOOT_TARGETS := \
 	nitrogen6q2g \
 	nitrogen6s \
 	nitrogen6s1g \
-	wandboard
+	wandboard \
+	sgw-imx6
 
 UBOOT_MAKE_FLAGS += u-boot.imx
 
