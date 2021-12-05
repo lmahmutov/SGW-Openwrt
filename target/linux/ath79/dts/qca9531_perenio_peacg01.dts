@@ -10,6 +10,10 @@
 	model = "Perenio peacg01";
 
 	aliases {
+		led-boot = &led_status;
+		led-failsafe = &led_status;
+		led-running = &led_status;
+		led-upgrade = &led_status;
 		label-mac-device = &eth0;
 	};
 
@@ -25,33 +29,44 @@
 			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
 		};
 
-		switch {
-			label = "switch";
+		wps {
+			label = "wps";
 			linux,code = <BTN_0>;
-			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
 		};
 	};
 
-	gpio-export {
-		compatible = "gpio-export";
+	leds {
+		compatible = "gpio-leds";
 
-		gpio_lte_power {
-			gpio-export,name = "lte_power";
-			gpio-export,output = <1>;
-			gpios = <&gpio 0 GPIO_ACTIVE_HIGH>;
+		// Colors for non-Lite versions
+
+		led_status: status {
+			label = "green:status";
+			gpios = <&gpio 12 GPIO_ACTIVE_LOW>;
 		};
-	 };
+
+		lan {
+			label = "green:lan";
+			gpios = <&gpio 13 GPIO_ACTIVE_LOW>;
+		};
+
+		led_wlan: wlan {
+			label = "red:wlan";
+			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy0tpt";
+		};
+	};
+
+	i2c: i2c {
+		compatible = "i2c-gpio";
+
+		sda-gpios = <&gpio 17 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&gpio 16 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+	};
 };
 
 &pcie0 {
-	status = "okay";
-};
-
-&usb0 {
-	status = "okay";
-};
-
-&usb_phy {
 	status = "okay";
 };
 
@@ -78,22 +93,23 @@
 				label = "u-boot-env";
 				reg = <0x40000 0x10000>;
 			};
-
-			art: partition@50000 {
+			
+			partition@50000 {
 				label = "u-boot-env-bak";
 				reg = <0x50000 0x10000>;
-				read-only;
 			};
-
+			
 			partition@60000 {
 				label = "reserved";
 				reg = <0x60000 0x10000>;
 			};
-
-			partition@460000 {
+			
+			art: partition@70000 {
 				label = "art";
 				reg = <0x70000 0x10000>;
+				read-only;
 			};
+
 		};
 	};
 
@@ -108,27 +124,27 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				label = "kernel-0";
-				reg = <0x0 0x200000>;
+				label = "kernel";
+				reg = <0x0 0x400000>;
 			};
 
-			partition@200000 {
-				label = "root-0";
-				reg = <0x200000 0x2000000>;
-			};
-
-			partition@2200000 {
-				label = "firmware1";
-				reg = <0x2200000 0x2000000>;
-			};
-
-			partition@4400000 {
-				label = "overlay";
-				reg = <0x4400000 0x3C00000>;
+			partition@400000 {
+				label = "ubi";
+				reg = <0x400000 0x7C00000>;
 			};
 
 		};
 	};
+};
+
+&usb0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+};
+
+&usb_phy {
+	status = "okay";
 };
 
 &eth0 {

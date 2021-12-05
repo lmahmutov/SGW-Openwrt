@@ -238,7 +238,7 @@ define Device/perenio_peacg01
   SOC := qca9531
   DEVICE_VENDOR := Perenio
   DEVICE_MODEL := PEACG01
-  DEVICE_PACKAGES := kmod-ath10k-ct ath10k-firmware-qca9887-ct kmod-usb2
+  DEVICE_PACKAGES := kmod-ath10k-ct ath10k-firmware-qca9887-ct kmod-usb2 kmod-i2c-core
   SUPPORTED_DEVICES += PEACG01
   KERNEL_SIZE := 4096k
   IMAGE_SIZE := 131072k
