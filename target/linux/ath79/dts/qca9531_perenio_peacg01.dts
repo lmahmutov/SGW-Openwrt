@@ -7,26 +7,23 @@
 
 / {
 	compatible = "perenio,peacg01", "qca,qca9531";
-	model = "Perenio peacg01";
+	model = "Perenio PEACG01";
 
 	aliases {
-		led-boot = &led_status;
-		led-failsafe = &led_status;
-		led-running = &led_status;
-		led-upgrade = &led_status;
+		led-boot = &led_power;
+		led-failsafe = &led_power;
+		led-running = &led_power;
+		led-upgrade = &led_power;
 		label-mac-device = &eth0;
 	};
 
 	keys {
 		compatible = "gpio-keys";
 
-		pinctrl-names = "default";
-		pinctrl-0 = <&jtag_disable_pins>;
-
 		reset {
 			label = "reset";
 			linux,code = <KEY_RESTART>;
-			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio 15 GPIO_ACTIVE_LOW>;
 		};
 
 		wps {
@@ -39,30 +36,54 @@
 	leds {
 		compatible = "gpio-leds";
 
-		// Colors for non-Lite versions
-
-		led_status: status {
-			label = "green:status";
+		led_power: power {
+			label = "green:power";
 			gpios = <&gpio 12 GPIO_ACTIVE_LOW>;
 		};
 
 		lan {
 			label = "green:lan";
-			gpios = <&gpio 13 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
 		};
 
-		led_wlan: wlan {
-			label = "red:wlan";
-			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
+		wlan {
+			label = "green:wlan";
+			gpios = <&gpio 13 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
 		};
 	};
 
-	i2c: i2c {
+	i2c {
+		status = "okay";
 		compatible = "i2c-gpio";
+		#address-cels = <1>;
+		#size-cells = <0>;
 
-		sda-gpios = <&gpio 17 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
-		scl-gpios = <&gpio 16 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&enable_gpio16_gpio17>;
+
+                sda-gpios = <&gpio 17 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+                scl-gpios = <&gpio 16 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		
+		pcf8563: pcf8563@51 {
+			compatible = "nxp,pcf8563";
+			reg = <0x51>;
+			#clock-cells = <0>;
+	};
+	
+	};
+
+};
+
+&gpio {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&jtag_disable_pins>;
+};
+
+&pinmux {
+	enable_gpio16_gpio17: pinmux_enable_gpio16_gpio17 {
+ 	pinctrl-single,bits = <0x10 0x0 0x0000ffff>;
 	};
 };
 
@@ -138,9 +159,9 @@
 };
 
 &usb0 {
+	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "okay";
 };
 
 &usb_phy {
@@ -149,9 +170,7 @@
 
 &eth0 {
 	status = "okay";
-
 	phy-handle = <&swphy4>;
-
 	mtd-mac-address = <&art 0x0>;
 };
 
@@ -161,6 +180,5 @@
 
 &wmac {
 	status = "okay";
-
 	mtd-cal-data = <&art 0x1000>;
 };
