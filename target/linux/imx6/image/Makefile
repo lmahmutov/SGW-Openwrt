@@ -243,9 +243,21 @@ define Device/sgw-imx6
   DEVICE_MODEL := sgw-imx6
   DEVICE_DTS := sgw-imx6
     IMAGES := dtb
-    IMAGE/dtb := install-dtb 
+    IMAGE/dtb := install-dtb
+    IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
     KERNEL := kernel-bin | install-dtb
 endef
 TARGET_DEVICES += sgw-imx6
+
+define Device/netsom-imx6
+  DEVICE_VENDOR := NetSom IOT module
+  DEVICE_MODEL := netsom-imx6
+  DEVICE_DTS := netsom-imx6
+    IMAGES := dtb
+    IMAGE/dtb := install-dtb
+    IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+    KERNEL := kernel-bin | install-dtb
+endef
+TARGET_DEVICES += netsom-imx6
 
 $(eval $(call BuildImage))

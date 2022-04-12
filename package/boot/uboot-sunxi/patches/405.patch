@@ -1,0 +1,136 @@
+From b9a743f421ae6f3786eca008e5ebdab431af3be0 Mon Sep 17 00:00:00 2001
+From: Martin Cerveny <m.cerveny@computer.org>
+Date: Wed, 16 Sep 2020 16:00:25 +0200
+Subject: [PATCH] TESTING: add LCD display 480x272
+
+Added for testing - LCD display 480x272 with PWM backlight.
+
+working in u-boot:
+```
+U-Boot SPL 2020.10-rc4-00027-g4dcced1169-dirty (Sep 16 2020 - 11:33:41 +0200)
+DRAM: 64 MiB
+Trying to boot from MMC1
+
+U-Boot 2020.10-rc4-00027-g4dcced1169-dirty (Sep 16 2020 - 11:33:41 +0200) Allwinner Technology
+
+CPU:   Allwinner V3s (SUN8I 1681)
+Model: Lichee Pi Zero
+DRAM:  64 MiB
+MMC:   mmc@01c0f000: 0
+Loading Environment from FAT... *** Warning - bad CRC, using default environment
+
+In:serial
+Out:   vidconsole
+Err:   vidconsole
+Net:   No ethernet found.
+Hit any key to stop autoboot:  0
+=> dm tree
+ Class Index  Probed  DriverName
+-----------------------------------------------------------
+ root  0  [ + ]   root_driver   root_driver
+ video 0  [ + ]   sunxi_de2 |-- sunxi_de2
+ vidconsole0  [ + ]   vidconsole0   |   `-- sunxi_de2.vidconsole0
+ display   0  [ + ]   sunxi_lcd |-- sunxi_lcd
+ simple_bus0  [ + ]   simple_bus|-- soc
+ mmc   0  [ + ]   sunxi_mmc |   |-- mmc@01c0f000
+ blk   0  [ + ]   mmc_blk   |   |   `-- mmc@01c0f000.blk
+ clk   0  [ + ]   sun8i_v3s_ccu |   |-- clock@01c20000
+ reset 0  [ + ]   sunxi_reset   |   |   `-- reset
+ gpio  0  [ + ]   gpio_sunxi|   |-- pinctrl@01c20800
+ gpio  1  [ + ]   gpio_sunxi|   |   |-- PA
+ gpio  2  [ + ]   gpio_sunxi|   |   |-- PB
+ gpio  3  [ + ]   gpio_sunxi|   |   |-- PC
+ gpio  4  [ + ]   gpio_sunxi|   |   |-- PD
+ gpio  5  [ + ]   gpio_sunxi|   |   |-- PE
+ gpio  6  [ + ]   gpio_sunxi|   |   |-- PF
+ gpio  7  [ + ]   gpio_sunxi|   |   |-- PG
+ gpio  8  [ + ]   gpio_sunxi|   |   |-- PH
+ gpio  9  [ + ]   gpio_sunxi|   |   `-- PI
+ serial0  [ + ]   ns16550_serial|   |-- serial@01c28000
+ pwm   0  [ + ]   sunxi_pwm |   `-- pwm@1c21400
+ backlight 0  [ + ]   pwm_backlight |-- backlight
+ panel 0  [ + ]   simple_panel  |-- panel
+ clk   1  [ + ]   fixed_rate_clock  |-- osc24M_clk
+ clk   2  [ + ]   fixed_rate_clock  `-- osc32k_clk
+=> lcdputs ABCDEF
+=>
+```
+
+linux dmesg (with enabled simple-framebuffer in dtb (DRM not configured):
+```
+[0.965342] simple-framebuffer 43b00000.framebuffer: framebuffer at 0x43b00000, 0x7f800 bytes, mapped to 0x(ptrval)
+[0.975987] simple-framebuffer 43b00000.framebuffer: format=x8r8g8b8, mode=480x272x32, linelength=1920
+[0.988362] Console: switching to colour frame buffer device 60x34
+[0.996903] simple-framebuffer 43b00000.framebuffer: fb0: simplefb registered!
+```
+
+Signed-off-by: Martin Cerveny <m.cerveny@computer.org>
+---
+ arch/arm/dts/sun8i-v3s-licheepi-zero.dts | 54 ++++++++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/arch/arm/dts/sun8i-v3s-licheepi-zero.dts b/arch/arm/dts/sun8i-v3s-licheepi-zero.dts
+index 3d9168cbaec..5a8a56458f4 100644
+--- a/arch/arm/dts/sun8i-v3s-licheepi-zero.dts
++++ b/arch/arm/dts/sun8i-v3s-licheepi-zero.dts
+@@ -55,6 +55,60 @@
+ 	chosen {
+ 		stdout-path = "serial0:115200n8";
+ 	};
++
++	backlight: backlight {
++		compatible = "pwm-backlight";
++		pwms = <&pwm 0 1000000 0>;
++		brightness-levels = <0 30 40 50 60 70 100>;
++		default-brightness-level = <6>;
++	};
++
++	panel: panel {
++		compatible = "qiaodian,qd43003c0-40", "simple-panel";
++		backlight = <&backlight>;
++
++		port {
++			panel_input: endpoint {
++				remote-endpoint = <&tcon0_out_lcd>;
++			};
++		};
++
++		display-timings {
++			timing0: timing0 {
++				clock-frequency = <9000000>;
++				hactive = <480>;
++				vactive = <272>;
++
++				hfront-porch = <8>;
++				hsync-len = <4>;
++				hback-porch = <43>;
++
++				vback-porch = <12>;
++				vsync-len = <10>;
++				vfront-porch = <4>;
++			};
++		};
++	};
++
++};
++
++&tcon0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&lcd_pins>;
++	status = "okay";
++};
++
++&tcon0_out {
++	tcon0_out_lcd: endpoint@0 {
++		reg = <0>;
++		remote-endpoint = <&panel_input>;
++	};
++};
++
++&pwm {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pwm0_pins>;
++	status = "okay";
+ };
+ 
+ &mmc0 {

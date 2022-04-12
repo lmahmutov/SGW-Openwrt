@@ -1,0 +1,19 @@
+What's new in Gecko Platform 2.7.10.0
+* RAIL: Performance improvements in GB868 PHYs
+* Gecko Bootloader: Increased the BGAPI DFU payload buffer size to prevent possible buffer overflow.
+
+What's new in Gecko Platform 2.7.9.0
+* RAIL: Change to reduce current consumption in EM2.
+
+What's new in Gecko Platform 2.7.8.0
+* NVM3: Additional improvements to worst case execution time of nvm3_repack() by using cache. 
+
+What's new in Gecko Platform 2.7.7.0
+* NVM3: Improved worst case execution time of nvm3_repack()
+
+What's new in Gecko Platform 2.7.0.0
+* Added PLFRCO and TRNG support for EFR32xG13 and xGM13 rev D. devices
+* RAIL: Improved the configuration switch time in dynamic multiprotocol applications
+* RAIL: Added a new Packet Trace (PTI) message for switching protocols in dynamic multiprotocol applications
+* RAIL: Improved the LQI value returned for IEEE 802.15.4 based PHYs
+* ARM mbed TLS: updated to release v2.7.10

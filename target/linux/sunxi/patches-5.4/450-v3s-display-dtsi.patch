@@ -1,0 +1,124 @@
+--- a/arch/arm/boot/dts/sun8i-v3s.dtsi
++++ b/arch/arm/boot/dts/sun8i-v3s.dtsi
+@@ -43,11 +43,27 @@
+ #include <dt-bindings/interrupt-controller/arm-gic.h>
+ #include <dt-bindings/clock/sun8i-v3s-ccu.h>
+ #include <dt-bindings/reset/sun8i-v3s-ccu.h>
++#include <dt-bindings/clock/sun8i-de2.h>
+ 
+ / {
+ 	#address-cells = <1>;
+ 	#size-cells = <1>;
+ 	interrupt-parent = <&gic>;
++ 
++	chosen {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges;
++
++		framebuffer-lcd {
++			compatible = "allwinner,simple-framebuffer",
++				     "simple-framebuffer";
++			allwinner,pipeline = "mixer0-lcd0";
++			clocks = <&display_clocks CLK_MIXER0>,
++				 <&ccu CLK_TCON0>;
++			status = "disabled";
++		};
++	};
+ 
+ 	cpus {
+ 		#address-cells = <1>;
+@@ -170,10 +186,21 @@
+ 					#address-cells = <1>;
+ 					#size-cells = <0>;
+ 					reg = <1>;
++					tcon0_out_lcd: endpoint@0 {
++						reg = <0>;
++					};
+ 				};
+ 			};
+ 		};
+ 
++		dma: dma-controller@01c02000 {
++			compatible = "allwinner,sun8i-v3s-dma";
++			reg = <0x01c02000 0x1000>;
++			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_DMA>;
++			resets = <&ccu RST_BUS_DMA>;
++			#dma-cells = <1>;
++		};
+ 
+ 		mmc0: mmc@1c0f000 {
+ 			compatible = "allwinner,sun7i-a20-mmc";
+@@ -299,6 +326,14 @@
+ 				function = "i2c0";
+ 			};
+ 
++			lcd_pins: lcd-pins {
++				pins = "PE0", "PE1", "PE2", "PE3", "PE4", "PE5",
++				       "PE6", "PE7", "PE8", "PE9", "PE10", "PE11",
++				       "PE12", "PE13", "PE14", "PE15", "PE16", "PE17",
++				       "PE18", "PE19", "PE23", "PE24";
++				function = "lcd";
++ 			};
++
+ 			uart0_pb_pins: uart0-pb-pins {
+ 				pins = "PB8", "PB9";
+ 				function = "uart0";
+@@ -324,6 +359,16 @@
+ 				pins = "PC0", "PC1", "PC2", "PC3";
+ 				function = "spi0";
+ 			};
++
++			pwm0_pins: pwm0-pins {
++				pins = "PB4";
++				function = "pwm0";
++			};
++
++			pwm1_pins: pwm1-pins {
++				pins = "PB5";
++				function = "pwm1";
++			};
+ 		};
+ 
+ 		timer@1c20c00 {
+@@ -349,6 +394,25 @@
+ 			status = "disabled";
+ 		};
+ 
++		codec: codec@01c22c00 {
++			#sound-dai-cells = <0>;
++			compatible = "allwinner,sun8i-v3s-codec";
++			reg = <0x01c22c00 0x400>;
++			interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_CODEC>, <&ccu CLK_AC_DIG>;
++			clock-names = "apb", "codec";
++			resets = <&ccu RST_BUS_CODEC>;
++			dmas = <&dma 15>, <&dma 15>;
++			dma-names = "rx", "tx";
++			allwinner,codec-analog-controls = <&codec_analog>;
++			status = "disabled";
++		};
++
++		codec_analog: codec-analog@01c23000 {
++			compatible = "allwinner,sun8i-v3s-codec-analog";
++			reg = <0x01c23000 0x4>;
++		};
++
+ 		uart0: serial@1c28000 {
+ 			compatible = "snps,dw-apb-uart";
+ 			reg = <0x01c28000 0x400>;
+@@ -430,5 +494,13 @@
+ 			#interrupt-cells = <3>;
+ 			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+ 		};
++
++		pwm: pwm@1c21400 {
++			compatible = "allwinner,sun7i-a20-pwm";
++			reg = <0x01c21400 0x400>;
++			clocks = <&osc24M>;
++			#pwm-cells = <3>;
++			status = "disabled";
++		};
+ 	};
+ };

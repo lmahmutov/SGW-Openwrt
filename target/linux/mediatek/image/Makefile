@@ -6,6 +6,7 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
+
 define Build/sysupgrade-emmc
 	rm -f $@.recovery
 	mkfs.fat -C $@.recovery 3070

@@ -1,0 +1,8 @@
+{
+    "policy": 1,
+    "devices": [
+        {"manufacture": "test1_name", "model_id": "test1_id"},
+        {"manufacture": "test2_name", "model_id": "test2_id"},
+        {"manufacture": "TUYATEC-nPGIPl5D", "model_id": "TS0001"}
+    ]
+}

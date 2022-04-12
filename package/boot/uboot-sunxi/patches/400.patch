@@ -1,0 +1,52 @@
+From fa26479dc0da8643bb46d19ebb1b364a54527f67 Mon Sep 17 00:00:00 2001
+From: Martin Cerveny <m.cerveny@computer.org>
+Date: Wed, 16 Sep 2020 11:59:52 +0200
+Subject: [PATCH] sunxi: video: No double clock on DE2
+
+Weird code or comment. This is variant is tested on V3s.
+
+Signed-off-by: Martin Cerveny <m.cerveny@computer.org>
+---
+ drivers/video/sunxi/lcdc.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/video/sunxi/lcdc.c b/drivers/video/sunxi/lcdc.c
+index 73033c3b858..b772947a6b6 100644
+--- a/drivers/video/sunxi/lcdc.c
++++ b/drivers/video/sunxi/lcdc.c
+@@ -244,7 +244,6 @@ void lcdc_pll_set(struct sunxi_ccm_reg *ccm, int tcon, int dotclock,
+ 	 * not sync to higher frequencies.
+ 	 */
+ 	for (m = min_m; m <= max_m; m++) {
+-#ifndef CONFIG_SUNXI_DE2
+ 		n = (m * dotclock) / step;
+ 
+ 		if ((n >= 9) && (n <= 127)) {
+@@ -261,8 +260,8 @@ void lcdc_pll_set(struct sunxi_ccm_reg *ccm, int tcon, int dotclock,
+ 		/* These are just duplicates */
+ 		if (!(m & 1))
+ 			continue;
+-#endif
+ 
++#ifndef CONFIG_SUNXI_DE2
+ 		/* No double clock on DE2 */
+ 		n = (m * dotclock) / (step * 2);
+ 		if ((n >= 9) && (n <= 127)) {
+@@ -275,6 +274,7 @@ void lcdc_pll_set(struct sunxi_ccm_reg *ccm, int tcon, int dotclock,
+ 				best_double = 1;
+ 			}
+ 		}
++#endif
+ 	}
+ 
+ #ifdef CONFIG_MACH_SUN6I
+@@ -315,8 +315,7 @@ void lcdc_pll_set(struct sunxi_ccm_reg *ccm, int tcon, int dotclock,
+ 		writel(CCM_LCD_CH0_CTRL_GATE | CCM_LCD_CH0_CTRL_RST | pll,
+ 		       &ccm->lcd0_ch0_clk_cfg);
+ #else
+-		writel(CCM_LCD_CH0_CTRL_GATE | CCM_LCD_CH0_CTRL_RST | pll,
+-		       &ccm->lcd0_clk_cfg);
++		writel(CCM_LCD0_CTRL_GATE | pll, &ccm->lcd0_clk_cfg);
+ #endif
+ 	}
+ #ifndef CONFIG_SUNXI_DE2
