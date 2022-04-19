@@ -33,21 +33,21 @@ define Build/Prepare
 	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
-TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include
-TARGET_LDFLAGS += -L$(STAGING_DIR)/usr/lib
+#TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include
+#TARGET_LDFLAGS += -L$(STAGING_DIR)/usr/lib
 
-define Build/Compile
-	$(MAKE) -C $(PKG_BUILD_DIR)/ \
-	CC="$(TARGET_CC)" \
-	CFLAGS="$(TARGET_CFLAGS)" \
-	LDFLAGS="$(TARGET_LDFLAGS)"
-endef
+#define Build/Compile
+#	$(MAKE) -C $(PKG_BUILD_DIR)/ \
+#	CC="$(TARGET_CC)" \
+#	CFLAGS="$(TARGET_CFLAGS)" \
+#	LDFLAGS="$(TARGET_LDFLAGS)"
+#endef
 
 define Package/lvgl/install
 	$(CP) ./files/* $(1)/
 	$(INSTALL_DIR) $(1)/usr/bin
 	# install the binary
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/lvgl $(1)/usr/bin/lvgl
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/lv_bin $(1)/usr/bin/lvgl
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

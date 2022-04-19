@@ -51,6 +51,7 @@ struct bsd_fb_var_info{
 
 struct bsd_fb_fix_info{
     long int line_length;
+    long int smem_len;
 };
 
 /**********************
@@ -75,6 +76,10 @@ static int fbfd = 0;
  *      MACROS
  **********************/
 
+#if USE_BSD_FBDEV
+#define FBIOBLANK FBIO_BLANK
+#endif /* USE_BSD_FBDEV */
+
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
@@ -87,7 +92,13 @@ void fbdev_init(void)
         perror("Error: cannot open framebuffer device");
         return;
     }
-    printf("The framebuffer device was opened successfully.\n");
+    LV_LOG_INFO("The framebuffer device was opened successfully");
+
+    // Make sure that the display is on.
+    /*if (ioctl(fbfd, FBIOBLANK, FB_BLANK_UNBLANK) != 0) {
+        perror("ioctl(FBIOBLANK)");
+        return;
+    }*/
 
 #if USE_BSD_FBDEV
     struct fbtype fb;
@@ -107,10 +118,11 @@ void fbdev_init(void)
 
     vinfo.xres = (unsigned) fb.fb_width;
     vinfo.yres = (unsigned) fb.fb_height;
-    vinfo.bits_per_pixel = fb.fb_depth + 8;
+    vinfo.bits_per_pixel = fb.fb_depth;
     vinfo.xoffset = 0;
     vinfo.yoffset = 0;
     finfo.line_length = line_length;
+    finfo.smem_len = finfo.line_length * vinfo.yres;
 #else /* USE_BSD_FBDEV */
 
     // Get fixed screen information
@@ -126,7 +138,7 @@ void fbdev_init(void)
     }
 #endif /* USE_BSD_FBDEV */
 
-    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+    LV_LOG_INFO("%dx%d, %dbpp", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
 
     // Figure out the size of the screen in bytes
     screensize =  finfo.smem_len; //finfo.line_length * vinfo.yres;    
@@ -137,9 +149,11 @@ void fbdev_init(void)
         perror("Error: failed to map framebuffer device to memory");
         return;
     }
-    memset(fbp, 0, screensize);
 
-    printf("The framebuffer device was mapped to memory successfully.\n");
+    // Don't initialise the memory to retain what's currently displayed / avoid clearing the screen.
+    // This is important for applications that only draw to a subsection of the full framebuffer.
+
+    LV_LOG_INFO("The framebuffer device was mapped to memory successfully");
 
 }
 
@@ -152,7 +166,7 @@ void fbdev_exit(void)
  * Flush a buffer to the marked area
  * @param drv pointer to driver where this function belongs
  * @param area an area where to copy `color_p`
- * @param color_p an array of pixel to copy to the `area` part of the screen
+ * @param color_p an array of pixels to copy to the `area` part of the screen
  */
 void fbdev_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color_p)
 {
@@ -172,7 +186,7 @@ void fbdev_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color
     int32_t act_y2 = area->y2 > (int32_t)vinfo.yres - 1 ? (int32_t)vinfo.yres - 1 : area->y2;
 
 
-    lv_coord_t w = lv_area_get_width(area);
+    lv_coord_t w = (act_x2 - act_x1 + 1);
     long int location = 0;
     long int byte_location = 0;
     unsigned char bit_location = 0;
@@ -232,6 +246,19 @@ void fbdev_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color
     //ret = ioctl(state->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)rect));
 
     lv_disp_flush_ready(drv);
+}
+
+void fbdev_get_sizes(uint32_t *width, uint32_t *height) {
+    if (width)
+        *width = vinfo.xres;
+
+    if (height)
+        *height = vinfo.yres;
+}
+
+void fbdev_set_offset(uint32_t xoffset, uint32_t yoffset) {
+    vinfo.xoffset = xoffset;
+    vinfo.yoffset = yoffset;
 }
 
 /**********************

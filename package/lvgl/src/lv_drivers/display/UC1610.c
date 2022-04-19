@@ -52,7 +52,7 @@
 #define UC1610_SET_SCROLL_LINES_MSB         0x50      /* + 3 MSB bits */
 #define UC1610_SET_ALL_PIXEL_ON             0xA4      /* + 1 / 0 : set all pixel on, reverse */
 #define UC1610_SET_INVERSE_DISPLAY          0xA6      /* + 1 / 0 : inverse all data stored in ram, reverse */
-#define UC1610_SET_MAPPING_CONTROL          0xC0      /* control mirorring */
+#define UC1610_SET_MAPPING_CONTROL          0xC0      /* control mirroring */
 #define UC1610_SET_MAPPING_CONTROL_LC_FLAG  1
 #define UC1610_SET_MAPPING_CONTROL_MX_FLAG  (1 << 1)
 #define UC1610_SET_MAPPING_CONTROL_MY_FLAG  (1 << 2)
@@ -82,7 +82,7 @@ static uint8_t cmd_buf[12];
  *      MACROS
  **********************/
 
-/* Return the byte bitmask of a pixel color corresponding to VDB arrangement */
+/* Return the byte bitmask of a pixel color corresponding to draw_buf arrangement */
 #define PIXIDX(y, c)	((c) << (((y) & 3) << 1))
 
 /**********************
@@ -165,7 +165,7 @@ void uc1610_flush_cb(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_
   LV_DRV_DISP_SPI_WR_ARRAY(cmd_buf, 10);
   LV_DRV_DISP_SPI_CS(1);
 
-  /*Flush VDB on display memory*/
+  /*Flush draw_buf on display memory*/
   LV_DRV_DISP_CMD_DATA(UC1610_DATA_MODE);
   LV_DRV_DISP_SPI_CS(0);
   LV_DRV_DISP_SPI_WR_ARRAY(buf, buf_size);

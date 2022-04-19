@@ -1,78 +1,82 @@
-#include <stdio.h>
-#include <unistd.h>
-
-#include "lv_drivers/display/fbdev.h"
-#include "lv_drivers/display/monitor.h"
-#include "lv_drivers/indev/evdev.h"
 #include "lvgl/lvgl.h"
+#include "lvgl/demos/lv_demos.h"
+#include "lv_drivers/display/fbdev.h"
+#include "lv_drivers/indev/evdev.h"
+#include <unistd.h>
+#include <pthread.h>
+#include <time.h>
+#include <sys/time.h>
 
-#define DISP_BUF_SIZE (80*LV_HOR_RES_MAX)
+#define DISP_BUF_SIZE (128 * 1024)
 
-// defining an event handler for example button presses
-static void event_handler(lv_obj_t * obj, lv_event_t event)
+int main(void)
 {
-  if(event == LV_EVENT_CLICKED) {
-    printf("Clicked\n");
-  }
-  else if(event == LV_EVENT_VALUE_CHANGED) {
-    printf("Toggled\n");
-  }
+    /*LittlevGL init*/
+    lv_init();
+
+    /*Linux frame buffer device init*/
+    fbdev_init();
+
+    /*A small buffer for LittlevGL to draw the screen's content*/
+    static lv_color_t buf[DISP_BUF_SIZE];
+
+    /*Initialize a descriptor for the buffer*/
+    static lv_disp_draw_buf_t disp_buf;
+    lv_disp_draw_buf_init(&disp_buf, buf, NULL, DISP_BUF_SIZE);
+
+    /*Initialize and register a display driver*/
+    static lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.draw_buf   = &disp_buf;
+    disp_drv.flush_cb   = fbdev_flush;
+    disp_drv.hor_res    = 480;
+    disp_drv.ver_res    = 272;
+    lv_disp_drv_register(&disp_drv);
+
+    evdev_init();
+    static lv_indev_drv_t indev_drv_1;
+    lv_indev_drv_init(&indev_drv_1); /*Basic initialization*/
+    indev_drv_1.type = LV_INDEV_TYPE_POINTER;
+
+    /*This function will be called periodically (by the library) to get the mouse position and state*/
+    indev_drv_1.read_cb = evdev_read;
+    lv_indev_t *mouse_indev = lv_indev_drv_register(&indev_drv_1);
+
+
+    /*Set a cursor for the mouse*/
+    LV_IMG_DECLARE(mouse_cursor_icon)
+    lv_obj_t * cursor_obj = lv_img_create(lv_scr_act()); /*Create an image object for the cursor */
+    lv_img_set_src(cursor_obj, &mouse_cursor_icon);           /*Set the image source*/
+    lv_indev_set_cursor(mouse_indev, cursor_obj);             /*Connect the image  object to the driver*/
+
+
+    /*Create a Demo*/
+    lv_demo_widgets();
+
+    /*Handle LitlevGL tasks (tickless mode)*/
+    while(1) {
+        lv_timer_handler();
+        usleep(5000);
+    }
+
+    return 0;
 }
 
-// main program for lv_example
-int main(int argc, char *argv[]) {
-  
-  printf("lv_init\n");
-  /*LittlevGL init*/
-  lv_init();
-  
-  /*Linux frame buffer device init*/
-  fbdev_init();
+/*Set in lv_conf.h as `LV_TICK_CUSTOM_SYS_TIME_EXPR`*/
+uint32_t custom_tick_get(void)
+{
+    static uint64_t start_ms = 0;
+    if(start_ms == 0) {
+        struct timeval tv_start;
+        gettimeofday(&tv_start, NULL);
+        start_ms = (tv_start.tv_sec * 1000000 + tv_start.tv_usec) / 1000;
+    }
 
-  /*A small buffer for LittlevGL to draw the screen's content*/
-  static lv_color_t buf[DISP_BUF_SIZE];
+    struct timeval tv_now;
+    gettimeofday(&tv_now, NULL);
+    uint64_t now_ms;
+    now_ms = (tv_now.tv_sec * 1000000 + tv_now.tv_usec) / 1000;
 
-  /*Initialize a descriptor for the buffer*/
-  static lv_disp_buf_t disp_buf;
-  lv_disp_buf_init(&disp_buf, buf, NULL, DISP_BUF_SIZE);
-
-  /*Initialize and register a display driver*/
-  lv_disp_drv_t disp_drv;
-  lv_disp_drv_init(&disp_drv);
-  disp_drv.buffer = &disp_buf;
-  disp_drv.flush_cb = fbdev_flush;
-  lv_disp_drv_register(&disp_drv);
-  
-  /*Initialize and register an input device*/
-  evdev_init();
-  lv_indev_drv_t indev_drv;
-  lv_indev_drv_init(&indev_drv);             /*Descriptor of a input device driver*/
-  indev_drv.type = LV_INDEV_TYPE_POINTER;    /*Touch pad is a pointer-like device*/
-  indev_drv.read_cb = evdev_read;      /*Set your driver function*/
-  lv_indev_drv_register(&indev_drv);         /*Finally register the driver*/
-  
-  /* Demo Code - replace this with yours */
-  /*Create a "Hello world!" label*/
-  lv_obj_t * label = lv_label_create(lv_scr_act(), NULL);
-  lv_label_set_text(label, "Hello world!");
-  lv_obj_align(label, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-  
-  /*Create a button*/
-  lv_obj_t * btnLabel;
-
-  lv_obj_t * btn1 = lv_btn_create(lv_scr_act(), NULL);
-  lv_obj_set_event_cb(btn1, event_handler);
-  lv_obj_align(btn1, NULL, LV_ALIGN_CENTER, 0, 0);
-
-  btnLabel = lv_label_create(btn1, NULL);
-  lv_label_set_text(btnLabel, "Press Me");
-  
-  printf("starting loop\n");
-  while(1) {
-    lv_tick_inc(5);
-    lv_task_handler();
-    usleep(5000);
-  }
-  
-  return 0;
+    uint32_t time_ms = now_ms - start_ms;
+    return time_ms;
 }
