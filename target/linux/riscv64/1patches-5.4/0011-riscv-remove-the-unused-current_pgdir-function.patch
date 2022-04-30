@@ -1,0 +1,30 @@
+From 70a77d12d4bf71e2713971c7174235a365f92ba5 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 9 Jan 2018 15:00:33 +0100
+Subject: [PATCH 11/49] riscv: remove the unused current_pgdir function
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/include/asm/mmu_context.h | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/arch/riscv/include/asm/mmu_context.h b/arch/riscv/include/asm/mmu_context.h
+index 9742483..082ef86 100644
+--- a/arch/riscv/include/asm/mmu_context.h
++++ b/arch/riscv/include/asm/mmu_context.h
+@@ -39,11 +39,6 @@ static inline void destroy_context(struct mm_struct *mm)
+ {
+ }
+ 
+-static inline pgd_t *current_pgdir(void)
+-{
+-	return pfn_to_virt(csr_read(sptbr) & SPTBR_PPN);
+-}
+-
+ static inline void set_pgdir(pgd_t *pgd)
+ {
+ 	csr_write(sptbr, virt_to_pfn(pgd) | SPTBR_MODE);
+-- 
+2.7.4
+

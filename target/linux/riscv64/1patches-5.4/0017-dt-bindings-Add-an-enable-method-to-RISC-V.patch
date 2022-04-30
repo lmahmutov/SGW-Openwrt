@@ -1,0 +1,44 @@
+From d26bfe6c761926c4e92789e10f4f9a2f2b36383f Mon Sep 17 00:00:00 2001
+From: Palmer Dabbelt <palmer@sifive.com>
+Date: Mon, 20 Nov 2017 11:26:36 -0800
+Subject: [PATCH 17/49] dt-bindings: Add an enable method to RISC-V
+
+RISC-V doesn't currently specify a mechanism for enabling or disabling
+CPUs.  Instead, we assume that all CPUs are enabled on boot, and if
+someone wants to save power we instead put a CPU to sleep via a WFI
+loop.  Future systems may have an explicit mechanism for putting a CPU
+to sleep, so we're standardizing the device tree entry for when that
+happens.
+
+We're not defining a spin-table based interface to the firmware, as the
+plan is to handle this entirely within the kernel instead.
+
+CC: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ Documentation/devicetree/bindings/riscv/cpus.txt | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/riscv/cpus.txt b/Documentation/devicetree/bindings/riscv/cpus.txt
+index b0b038d..6aa9cd0 100644
+--- a/Documentation/devicetree/bindings/riscv/cpus.txt
++++ b/Documentation/devicetree/bindings/riscv/cpus.txt
+@@ -82,6 +82,15 @@ described below.
+                 Value type: <string>
+                 Definition: Contains the RISC-V ISA string of this hart.  These
+                             ISA strings are defined by the RISC-V ISA manual.
++        - cpu-enable-method:
++                Usage: optional
++                Value type: <stringlist>
++                Definition: When absent, default is either "always-disabled"
++                            "always-enabled", depending on the current state
++                            of the CPU.
++                            Must be one of:
++                                * "always-disabled": This CPU cannot be enabled.
++                                * "always-enabled": This CPU cannot be disabled.
+ 
+ Example: SiFive Freedom U540G Development Kit
+ ---------------------------------------------
+-- 
+2.7.4
+

@@ -1,0 +1,61 @@
+From 3e076a7e049267e9c483674d0dd1caaca565dbef Mon Sep 17 00:00:00 2001
+From: Michael Clark <mjc@sifive.com>
+Date: Sat, 16 Dec 2017 11:17:02 -0800
+Subject: [PATCH 02/49] RISC-V: Remove duplicate command-line parsing logic
+
+builtin_cmdline handling is present in drivers/of/fdt.c so the
+duplicate logic in arch/riscv/setup.c results in duplication of
+the builtin command line. e.g. CONFIG_CMDLINE="root=/dev/vda ro"
+gets appended twice and gives "root=/dev/vda ro root=/dev/vda ro"
+
+Before this patch:
+
+[    0.000000] Kernel command line: root=/dev/vda ro root=/dev/vda ro
+
+After this patch:
+
+[    0.000000] Kernel command line: root=/dev/vda ro
+
+Signed-off-by: Michael Clark <mjc@sifive.com>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/kernel/setup.c | 16 ----------------
+ 1 file changed, 16 deletions(-)
+
+diff --git a/arch/riscv/kernel/setup.c b/arch/riscv/kernel/setup.c
+index cb7b0c6..a548ccf 100644
+--- a/arch/riscv/kernel/setup.c
++++ b/arch/riscv/kernel/setup.c
+@@ -49,10 +49,6 @@ struct screen_info screen_info = {
+ };
+ #endif
+ 
+-#ifdef CONFIG_CMDLINE_BOOL
+-static char __initdata builtin_cmdline[COMMAND_LINE_SIZE] = CONFIG_CMDLINE;
+-#endif /* CONFIG_CMDLINE_BOOL */
+-
+ unsigned long va_pa_offset;
+ EXPORT_SYMBOL(va_pa_offset);
+ unsigned long pfn_base;
+@@ -208,18 +204,6 @@ static void __init setup_bootmem(void)
+ 
+ void __init setup_arch(char **cmdline_p)
+ {
+-#ifdef CONFIG_CMDLINE_BOOL
+-#ifdef CONFIG_CMDLINE_OVERRIDE
+-	strlcpy(boot_command_line, builtin_cmdline, COMMAND_LINE_SIZE);
+-#else
+-	if (builtin_cmdline[0] != '\0') {
+-		/* Append bootloader command line to built-in */
+-		strlcat(builtin_cmdline, " ", COMMAND_LINE_SIZE);
+-		strlcat(builtin_cmdline, boot_command_line, COMMAND_LINE_SIZE);
+-		strlcpy(boot_command_line, builtin_cmdline, COMMAND_LINE_SIZE);
+-	}
+-#endif /* CONFIG_CMDLINE_OVERRIDE */
+-#endif /* CONFIG_CMDLINE_BOOL */
+ 	*cmdline_p = boot_command_line;
+ 
+ 	parse_early_param();
+-- 
+2.7.4
+

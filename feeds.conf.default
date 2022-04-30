@@ -3,4 +3,4 @@ src-git luci https://git.openwrt.org/project/luci.git;openwrt-21.02
 src-git routing https://git.openwrt.org/feed/routing.git;openwrt-21.02
 src-git telephony https://git.openwrt.org/feed/telephony.git;openwrt-21.02
 src-git homeassistant https://github.com/lmahmutov/SGW-Homeassistant.git
-src-git node https://github.com/nxhack/openwrt-node-packages.git;openwrt-21.02
+#src-git node https://github.com/nxhack/openwrt-node-packages.git;openwrt-21.02

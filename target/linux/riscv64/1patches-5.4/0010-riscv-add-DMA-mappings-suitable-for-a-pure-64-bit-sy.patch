@@ -1,0 +1,178 @@
+From 9a8230fe7bcd9daf1ef91e337170477bad70560e Mon Sep 17 00:00:00 2001
+From: Palmer Dabbelt <palmer@sifive.com>
+Date: Thu, 22 Feb 2018 18:11:19 -0800
+Subject: [PATCH 10/49] riscv: add DMA mappings suitable for a pure 64-bit
+ system
+
+All RISC-V platforms today lack an IOMMU. However, legacy PCI devices sometimes
+require DMA-memory to be in the low 32 bits. To make this work, we enable the
+software-based bounce buffers from swiotlb. They only impose overhead when the
+device in question cannot address the full 64-bit address space, so a perfect fit.
+
+This patch assumes that DMA is coherent with the processor and the PCI bus. It
+also assumes that the processor and devices share a common address space. This is
+true for all RISC-V platforms so far.
+---
+ arch/riscv/Kconfig                   |  6 ++++
+ arch/riscv/include/asm/dma-mapping.h | 18 ++++++++++-
+ arch/riscv/kernel/setup.c            |  3 ++
+ arch/riscv/mm/Makefile               |  1 +
+ arch/riscv/mm/dma.c                  | 63 ++++++++++++++++++++++++++++++++++++
+ 5 files changed, 90 insertions(+), 1 deletion(-)
+ create mode 100644 arch/riscv/mm/dma.c
+
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index 0e66993..1afd0fb 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -51,6 +51,12 @@ config ZONE_DMA32
+ config ARCH_DMA_ADDR_T_64BIT
+ 	def_bool y
+ 
++config SWIOTLB
++	def_bool y
++
++config IOMMU_HELPER
++	def_bool y
++
+ config PAGE_OFFSET
+ 	hex
+ 	default 0xC0000000 if 32BIT && MAXPHYSMEM_2GB
+diff --git a/arch/riscv/include/asm/dma-mapping.h b/arch/riscv/include/asm/dma-mapping.h
+index 3eec100..45d1cea 100644
+--- a/arch/riscv/include/asm/dma-mapping.h
++++ b/arch/riscv/include/asm/dma-mapping.h
+@@ -22,9 +22,11 @@
+ /* Use ops->dma_mapping_error (if it exists) or assume success */
+ // #undef DMA_ERROR_CODE
+ 
++extern const struct dma_map_ops dma_riscv_ops;
++
+ static inline const struct dma_map_ops *get_arch_dma_ops(struct bus_type *bus)
+ {
+-	return &dma_noop_ops;
++	return &dma_riscv_ops;
+ }
+ 
+ static inline bool dma_capable(struct device *dev, dma_addr_t addr, size_t size)
+@@ -35,4 +37,18 @@ static inline bool dma_capable(struct device *dev, dma_addr_t addr, size_t size)
+ 	return addr + size - 1 <= *dev->dma_mask;
+ }
+ 
++static inline dma_addr_t phys_to_dma(struct device *dev, phys_addr_t paddr)
++{
++	return paddr;
++}
++
++static inline phys_addr_t dma_to_phys(struct device *dev, dma_addr_t dev_addr)
++{
++	return dev_addr;
++}
++
++static inline void dma_mark_clean(void *addr, size_t size)
++{
++}
++
+ #endif	/* __ASM_RISCV_DMA_MAPPING_H */
+diff --git a/arch/riscv/kernel/setup.c b/arch/riscv/kernel/setup.c
+index a8ea808..46ae581 100644
+--- a/arch/riscv/kernel/setup.c
++++ b/arch/riscv/kernel/setup.c
+@@ -29,6 +29,7 @@
+ #include <linux/of_fdt.h>
+ #include <linux/of_platform.h>
+ #include <linux/sched/task.h>
++#include <linux/swiotlb.h>
+ 
+ #include <asm/setup.h>
+ #include <asm/sections.h>
+@@ -207,6 +208,8 @@ void __init setup_arch(char **cmdline_p)
+ 	paging_init();
+ 	unflatten_device_tree();
+ 
++	swiotlb_init(1);
++
+ #ifdef CONFIG_SMP
+ 	setup_smp();
+ #endif
+diff --git a/arch/riscv/mm/Makefile b/arch/riscv/mm/Makefile
+index eb22ab4..5e18092 100644
+--- a/arch/riscv/mm/Makefile
++++ b/arch/riscv/mm/Makefile
+@@ -3,3 +3,4 @@ obj-y += fault.o
+ obj-y += extable.o
+ obj-y += ioremap.o
+ obj-y += cacheflush.o
++obj-y += dma.o
+diff --git a/arch/riscv/mm/dma.c b/arch/riscv/mm/dma.c
+new file mode 100644
+index 0000000..5c893cb
+--- /dev/null
++++ b/arch/riscv/mm/dma.c
+@@ -0,0 +1,63 @@
++/*
++ * Copyright (C) 2017 SiFive
++ *   Wesley Terpstra <wesley@sifive.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, see the file COPYING, or write
++ * to the Free Software Foundation, Inc.,
++ */
++
++#include <linux/gfp.h>
++#include <linux/mm.h>
++#include <linux/dma-mapping.h>
++#include <linux/scatterlist.h>
++#include <linux/swiotlb.h>
++
++static void *dma_riscv_alloc(struct device *dev, size_t size,
++                            dma_addr_t *dma_handle, gfp_t gfp,
++                            unsigned long attrs)
++{
++	// If the device cannot address ZONE_NORMAL, allocate from ZONE_DMA
++	gfp &= ~(__GFP_DMA | __GFP_DMA32 | __GFP_HIGHMEM);
++	if (IS_ENABLED(CONFIG_ZONE_DMA32) &&
++	    (dev == NULL || dev->coherent_dma_mask <= DMA_BIT_MASK(32)))
++	{
++		gfp |= __GFP_DMA32;
++	}
++
++	return swiotlb_alloc_coherent(dev, size, dma_handle, gfp);
++}
++
++static void dma_riscv_free(struct device *dev, size_t size,
++                          void *cpu_addr, dma_addr_t dma_addr,
++                          unsigned long attrs)
++{
++	return swiotlb_free_coherent(dev, size, cpu_addr, dma_addr);
++}
++
++const struct dma_map_ops dma_riscv_ops = {
++	.alloc			= dma_riscv_alloc,
++	.free			= dma_riscv_free,
++	.dma_supported		= swiotlb_dma_supported,
++	.map_page		= swiotlb_map_page,
++	.map_sg			= swiotlb_map_sg_attrs,
++	.unmap_page		= swiotlb_unmap_page,
++	.unmap_sg		= swiotlb_unmap_sg_attrs,
++	.sync_single_for_cpu	= swiotlb_sync_single_for_cpu,
++	.sync_single_for_device	= swiotlb_sync_single_for_device,
++	.sync_sg_for_cpu	= swiotlb_sync_sg_for_cpu,
++	.sync_sg_for_device	= swiotlb_sync_sg_for_device,
++	.mapping_error		= swiotlb_dma_mapping_error,
++};
++
++EXPORT_SYMBOL(dma_riscv_ops);
+-- 
+2.7.4
+

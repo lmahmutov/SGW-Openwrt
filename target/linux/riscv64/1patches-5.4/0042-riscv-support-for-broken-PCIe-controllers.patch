@@ -1,0 +1,62 @@
+From 2e09e6ecc538ab561910a315bcfb0458db5c6e5d Mon Sep 17 00:00:00 2001
+From: "Wesley W. Terpstra" <wesley@sifive.com>
+Date: Tue, 6 Mar 2018 15:10:34 -0800
+Subject: [PATCH 42/49] riscv: support for broken PCIe controllers
+
+---
+ arch/riscv/Kconfig  | 13 +++++++++++++
+ arch/riscv/mm/dma.c | 11 ++++++++++-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index 8e8e8bb..65886a6 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -245,6 +245,19 @@ config PCI
+ 
+ 	  If you don't know what to do here, say Y.
+ 
++config PCI_DMA_32
++	bool "Support broken PCIe controllers"
++	depends on PCI
++	default PCIE_XILINX
++	help
++	  If you use a PCIe host controller which can only address 32 bits,
++	  enabling this option will cause all DMA to use the low 32 bits.
++
++	  These controllers then work, but hurt system performance.
++
++	  If you don't know what to do here, say N.
++
++
+ config PCI_DOMAINS
+ 	def_bool PCI
+ 
+diff --git a/arch/riscv/mm/dma.c b/arch/riscv/mm/dma.c
+index 5c893cb..0689bb2 100644
+--- a/arch/riscv/mm/dma.c
++++ b/arch/riscv/mm/dma.c
+@@ -45,10 +45,19 @@ static void dma_riscv_free(struct device *dev, size_t size,
+ 	return swiotlb_free_coherent(dev, size, cpu_addr, dma_addr);
+ }
+ 
++static int dma_riscv_supported(struct device *dev, u64 mask)
++{
++	/* Work-around for broken PCIe controllers */
++	if (IS_ENABLED(CONFIG_PCI_DMA_32) && mask > DMA_BIT_MASK(32))
++		return 0;
++
++	return swiotlb_dma_supported(dev, mask);
++}
++
+ const struct dma_map_ops dma_riscv_ops = {
+ 	.alloc			= dma_riscv_alloc,
+ 	.free			= dma_riscv_free,
+-	.dma_supported		= swiotlb_dma_supported,
++	.dma_supported		= dma_riscv_supported,
+ 	.map_page		= swiotlb_map_page,
+ 	.map_sg			= swiotlb_map_sg_attrs,
+ 	.unmap_page		= swiotlb_unmap_page,
+-- 
+2.7.4
+

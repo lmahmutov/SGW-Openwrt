@@ -1,0 +1,66 @@
+From f1b65f20fb05d1dd94656904848b96cc6df52bc0 Mon Sep 17 00:00:00 2001
+From: Andrew Waterman <andrew@sifive.com>
+Date: Thu, 26 Oct 2017 01:53:40 -0700
+Subject: [PATCH 08/49] RISC-V: Limit the scope of TLB shootdowns
+
+RISC-V systems perform TLB shootdows via the SBI, which currently
+performs an IPI to each of the remote harts which then performs a local
+TLB flush.  This process is a bit on the slow side, but we can at least
+speed it up for some common cases by restricting the set of harts to
+shoot down to the actual set of harts that are currently participating
+in the given mm context, as opposed to the entire system.
+
+This should provide a measurable performance increase, but we haven't
+measured it.  Regardless, it seems like obviously the right thing to do
+here.
+
+Signed-off-by: Andrew Waterman <andrew@sifive.com>
+Signed-off-by: Palmer Dabbelt <palmer@dabbelt.com>
+---
+ arch/riscv/include/asm/tlbflush.h | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/arch/riscv/include/asm/tlbflush.h b/arch/riscv/include/asm/tlbflush.h
+index 7b9c24e..7b209ae 100644
+--- a/arch/riscv/include/asm/tlbflush.h
++++ b/arch/riscv/include/asm/tlbflush.h
+@@ -36,7 +36,14 @@ static inline void local_flush_tlb_page(unsigned long addr)
+ 
+ #define flush_tlb_all() local_flush_tlb_all()
+ #define flush_tlb_page(vma, addr) local_flush_tlb_page(addr)
+-#define flush_tlb_range(vma, start, end) local_flush_tlb_all()
++
++static inline void flush_tlb_range(struct vm_area_struct *vma,
++		unsigned long start, unsigned long end)
++{
++	local_flush_tlb_all();
++}
++
++#define flush_tlb_mm(mm) flush_tlb_all()
+ 
+ #else /* CONFIG_SMP */
+ 
+@@ -45,16 +52,13 @@ static inline void local_flush_tlb_page(unsigned long addr)
+ #define flush_tlb_all() sbi_remote_sfence_vma(0, 0, -1)
+ #define flush_tlb_page(vma, addr) flush_tlb_range(vma, addr, 0)
+ #define flush_tlb_range(vma, start, end) \
+-	sbi_remote_sfence_vma(0, start, (end) - (start))
++	sbi_remote_sfence_vma(mm_cpumask((vma)->vm_mm)->bits, \
++			      start, (end) - (start))
++#define flush_tlb_mm(mm) \
++	sbi_remote_sfence_vma(mm_cpumask(mm)->bits, 0, -1)
+ 
+ #endif /* CONFIG_SMP */
+ 
+-/* Flush the TLB entries of the specified mm context */
+-static inline void flush_tlb_mm(struct mm_struct *mm)
+-{
+-	flush_tlb_all();
+-}
+-
+ /* Flush a range of kernel pages */
+ static inline void flush_tlb_kernel_range(unsigned long start,
+ 	unsigned long end)
+-- 
+2.7.4
+

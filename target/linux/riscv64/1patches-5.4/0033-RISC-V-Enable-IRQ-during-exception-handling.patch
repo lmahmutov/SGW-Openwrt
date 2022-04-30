@@ -1,0 +1,53 @@
+From 18a14cda232f0b5ae37ac2fe3910ea0616f8c684 Mon Sep 17 00:00:00 2001
+From: "zongbox@gmail.com" <zongbox@gmail.com>
+Date: Mon, 29 Jan 2018 23:51:45 -0800
+Subject: [PATCH 33/49] RISC-V: Enable IRQ during exception handling
+
+Interrupt is allowed during exception handling.
+There are warning messages if the kernel enables the configuration
+'CONFIG_DEBUG_ATOMIC_SLEEP=y'.
+
+BUG: sleeping function called from invalid context at kernel/locking/rwsem.c:23
+in_atomic(): 0, irqs_disabled(): 1, pid: 43, name: ash
+CPU: 0 PID: 43 Comm: ash Tainted:  G	 W	 4.15.0-rc8-00089-g89ffdae-dirty #17
+Call Trace:
+[<000000009abb1587>] walk_stackframe+0x0/0x7a
+[<00000000d4f3d088>] ___might_sleep+0x102/0x11a
+[<00000000b1fd792a>] down_read+0x18/0x28
+[<000000000289ec01>] do_page_fault+0x86/0x2f6
+[<00000000012441f6>] _do_fork+0x1b4/0x1e0
+[<00000000f46c3e3b>] ret_from_syscall+0xa/0xe
+
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Zong Li <zong@andestech.com>
+Signed-off-by: Palmer Dabbelt <palmer@dabbelt.com>
+---
+ arch/riscv/kernel/entry.S | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/kernel/entry.S b/arch/riscv/kernel/entry.S
+index 5e137fa..9aaf6c9 100644
+--- a/arch/riscv/kernel/entry.S
++++ b/arch/riscv/kernel/entry.S
+@@ -171,6 +171,9 @@ ENTRY(handle_exception)
+ 	REG_L a1, handle_arch_irq
+ 	jr a1
+ 1:
++	/* Exceptions run with interrupts enabled */
++	csrs sstatus, SR_SIE
++
+ 	/* Handle syscalls */
+ 	li t0, EXC_SYSCALL
+ 	beq s4, t0, handle_syscall
+@@ -197,8 +200,6 @@ handle_syscall:
+ 	 */
+ 	addi s2, s2, 0x4
+ 	REG_S s2, PT_SEPC(sp)
+-	/* System calls run with interrupts enabled */
+-	csrs sstatus, SR_SIE
+ 	/* Trace syscalls, but only if requested by the user. */
+ 	REG_L t0, TASK_TI_FLAGS(tp)
+ 	andi t0, t0, _TIF_SYSCALL_TRACE
+-- 
+2.7.4
+

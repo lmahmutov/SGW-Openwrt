@@ -1,0 +1,33 @@
+From 888cbeab598c6bf30633bf14a1405ef68acba4b5 Mon Sep 17 00:00:00 2001
+From: "Wesley W. Terpstra" <wesley@sifive.com>
+Date: Fri, 12 May 2017 16:01:18 -0700
+Subject: [PATCH 29/49] base: fix order of OF initialization
+
+This fixes: [    0.010000] cpu cpu0: Error -2 creating of_node link
+... which you get for every CPU on all architectures with a OF cpu/ node.
+
+This affects riscv, nios, etc.
+
+Signed-off-by: Palmer Dabbelt <palmer@dabbelt.com>
+---
+ drivers/base/init.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/base/init.c b/drivers/base/init.c
+index 48c0e22..0dcd17e 100644
+--- a/drivers/base/init.c
++++ b/drivers/base/init.c
+@@ -31,9 +31,9 @@ void __init driver_init(void)
+ 	/* These are also core pieces, but must come after the
+ 	 * core core pieces.
+ 	 */
++	of_core_init();
+ 	platform_bus_init();
+ 	cpu_dev_init();
+ 	memory_dev_init();
+ 	container_dev_init();
+-	of_core_init();
+ }
+-- 
+2.7.4
+

@@ -1,0 +1,48 @@
+From fe9b842f72921fb18b93cf47a255f374289ef242 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Thu, 4 Jan 2018 19:55:55 +0100
+Subject: [PATCH 07/49] riscv: disable SUM in the exception handler
+
+The SUM bit is enabled at the beginning of the copy_{to,from}_user and
+{get,put}_user routines, and cleared before they return.  But these user
+copy helper can be interrupted by exceptions, in which case the SUM bit
+will remain set, which leads to elevated privileges for the code running
+in exception context, as that can now access userspace address space
+unconditionally.  This frequently happens when the user copy routines
+access freshly allocated user memory that hasn't been faulted in, and a
+pagefault needs to be taken before the user copy routines can continue.
+
+Fix this by unconditionally clearing SUM when the exception handler is
+called - the restore code will automatically restore it based on the
+saved value.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/kernel/entry.S | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/arch/riscv/kernel/entry.S b/arch/riscv/kernel/entry.S
+index 7404ec2..87fc045 100644
+--- a/arch/riscv/kernel/entry.S
++++ b/arch/riscv/kernel/entry.S
+@@ -78,10 +78,13 @@ _save_context:
+ 	REG_S x31, PT_T6(sp)
+ 
+ 	/*
+-	 * Disable FPU to detect illegal usage of
+-	 * floating point in kernel space
++	 * Disable user-mode memory access as it should only be set in the
++	 * actual user copy routines.
++	 *
++	 * Disable the FPU to detect illegal usage of floating point in kernel
++	 * space.
+ 	 */
+-	li t0, SR_FS
++	li t0, SR_SUM | SR_FS
+ 
+ 	REG_L s0, TASK_TI_USER_SP(tp)
+ 	csrrc s1, sstatus, t0
+-- 
+2.7.4
+

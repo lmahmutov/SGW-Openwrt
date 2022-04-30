@@ -1,0 +1,35 @@
+From 48fb45691946afe9a421d676513d4e623932dbd3 Mon Sep 17 00:00:00 2001
+From: Palmer Dabbelt <palmer@sifive.com>
+Date: Tue, 24 Apr 2018 16:42:21 -0700
+Subject: [PATCH 46/49] (fixup) Don't barf on rv32
+
+CC: Michael Clark <mjc@sifive.com>
+---
+ drivers/irqchip/irq-riscv-intc.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/irqchip/irq-riscv-intc.c b/drivers/irqchip/irq-riscv-intc.c
+index 1f2c450e..fec897d 100644
+--- a/drivers/irqchip/irq-riscv-intc.c
++++ b/drivers/irqchip/irq-riscv-intc.c
+@@ -56,7 +56,16 @@ void riscv_intc_irq(struct pt_regs *regs)
+ {
+ 	struct pt_regs *old_regs = set_irq_regs(regs);
+ 	struct irq_domain *domain;
+-	int cause = csr_read(scause);
++	unsigned long cause = csr_read(scause);
++
++	/*
++	 * The high order bit of the trap cause register is always set for
++	 * interrupts, which allows us to differentiate them from exceptions
++	 * quickly.  The INTERRUPT_CAUSE_* macros don't contain that bit, so we
++	 * need to mask it off here.
++	 */
++	WARN_ON((cause & (1UL << (PTR_BITS - 1))) == 0);
++	cause = cause & ~(1UL << (PTR_BITS - 1));
+ 
+ 	irq_enter();
+ 
+-- 
+2.7.4
+

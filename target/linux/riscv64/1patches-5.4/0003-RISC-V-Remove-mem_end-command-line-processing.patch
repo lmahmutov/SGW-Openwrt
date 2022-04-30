@@ -1,0 +1,48 @@
+From 5d44bf2065e169dd857a4207505210fce25743e6 Mon Sep 17 00:00:00 2001
+From: Palmer Dabbelt <palmer@sifive.com>
+Date: Sat, 16 Dec 2017 11:17:16 -0800
+Subject: [PATCH 03/49] RISC-V: Remove mem_end command line processing
+
+This is just some cruft left over from before the port converted to
+device tree.  The right way to handle memory regions is to specify them
+in the device tree, which BBL (our simplest bootloader) is already
+capable of doing.  This patch simply removes the cruft.
+
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/kernel/setup.c | 19 -------------------
+ 1 file changed, 19 deletions(-)
+
+diff --git a/arch/riscv/kernel/setup.c b/arch/riscv/kernel/setup.c
+index a548ccf..c6d095f 100644
+--- a/arch/riscv/kernel/setup.c
++++ b/arch/riscv/kernel/setup.c
+@@ -149,25 +149,6 @@ void __init sbi_save(unsigned int hartid, void *dtb)
+ 	early_init_dt_scan(__va(dtb));
+ }
+ 
+-/*
+- * Allow the user to manually add a memory region (in case DTS is broken);
+- * "mem_end=nn[KkMmGg]"
+- */
+-static int __init mem_end_override(char *p)
+-{
+-	resource_size_t base, end;
+-
+-	if (!p)
+-		return -EINVAL;
+-	base = (uintptr_t) __pa(PAGE_OFFSET);
+-	end = memparse(p, &p) & PMD_MASK;
+-	if (end == 0)
+-		return -EINVAL;
+-	memblock_add(base, end - base);
+-	return 0;
+-}
+-early_param("mem_end", mem_end_override);
+-
+ static void __init setup_bootmem(void)
+ {
+ 	struct memblock_region *reg;
+-- 
+2.7.4
+

@@ -1,0 +1,89 @@
+From c6666575617e390d9068aeb6b70768906592cb0c Mon Sep 17 00:00:00 2001
+From: Alex Guo <xfguo@jlsemi.com>
+Date: Sun, 29 Jul 2018 01:14:47 +0000
+Subject: [PATCH 49/49] implement __lshrti3.
+
+Signed-off-by: Alex Guo <xfguo@jlsemi.com>
+---
+ arch/riscv/Makefile      |  3 +++
+ arch/riscv/lib/Makefile  |  1 +
+ arch/riscv/lib/tishift.S | 42 ++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 46 insertions(+)
+ create mode 100644 arch/riscv/lib/tishift.S
+
+diff --git a/arch/riscv/Makefile b/arch/riscv/Makefile
+index 6719dd3..8e79938 100644
+--- a/arch/riscv/Makefile
++++ b/arch/riscv/Makefile
+@@ -23,6 +23,9 @@ ifeq ($(CONFIG_ARCH_RV64I),y)
+ 
+ 	KBUILD_CFLAGS += -mabi=lp64
+ 	KBUILD_AFLAGS += -mabi=lp64
++	
++	KBUILD_CFLAGS	+= $(call cc-ifversion, -ge, 0500, -DCONFIG_ARCH_SUPPORTS_INT128)
++
+ 	KBUILD_MARCH = rv64im
+ 	LDFLAGS += -melf64lriscv
+ else
+diff --git a/arch/riscv/lib/Makefile b/arch/riscv/lib/Makefile
+index 596c2ca..445ec84 100644
+--- a/arch/riscv/lib/Makefile
++++ b/arch/riscv/lib/Makefile
+@@ -2,5 +2,6 @@ lib-y	+= delay.o
+ lib-y	+= memcpy.o
+ lib-y	+= memset.o
+ lib-y	+= uaccess.o
++lib-y	+= tishift.o
+ 
+ lib-$(CONFIG_32BIT) += udivdi3.o
+diff --git a/arch/riscv/lib/tishift.S b/arch/riscv/lib/tishift.S
+new file mode 100644
+index 0000000..69abb12
+--- /dev/null
++++ b/arch/riscv/lib/tishift.S
+@@ -0,0 +1,42 @@
++/*
++ * Copyright (C) 2018 Free Software Foundation, Inc.
++ *
++ *   This program is free software; you can redistribute it and/or
++ *   modify it under the terms of the GNU General Public License
++ *   as published by the Free Software Foundation, version 2.
++ *
++ *   This program is distributed in the hope that it will be useful,
++ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *   GNU General Public License for more details.
++ */
++  .globl __lshrti3
++__lshrti3:
++  beqz  a2, .L1
++  li    a5,64
++  sub   a5,a5,a2
++  addi  sp,sp,-16
++  sext.w a4,a5
++  blez  a5, .L2
++  sext.w a2,a2
++  sll   a4,a1,a4
++  srl   a0,a0,a2
++  srl   a1,a1,a2
++  or    a0,a0,a4
++  sd    a1,8(sp)
++  sd    a0,0(sp)
++  ld    a0,0(sp)
++  ld    a1,8(sp)
++  addi  sp,sp,16
++  ret
++.L1:
++  ret
++.L2:
++  negw  a4,a4
++  srl   a1,a1,a4
++  sd    a1,0(sp)
++  sd    zero,8(sp)
++  ld    a0,0(sp)
++  ld    a1,8(sp)
++  addi  sp,sp,16
++  ret
+-- 
+2.7.4
+

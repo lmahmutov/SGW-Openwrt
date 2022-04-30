@@ -1,0 +1,105 @@
+From 9400ce86cfa4180b7ca5593eb656651ff9ac3b1e Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 16 Jan 2018 09:37:50 +0100
+Subject: [PATCH 09/49] riscv: add ZONE_DMA32
+
+This patch allows devices that require memory that can be addressed
+using 32-bit addresses to work easily on RISC-V systems.  The newly
+improved dma-direct ops will tap into this pool automatically for
+32-bit addressing.
+
+Based on an earlier patch from Wesley W. Terpstra.
+
+CC: Wesley W. Terpstra <terpstra@sifive.com>
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/Kconfig        |  5 +++++
+ arch/riscv/kernel/setup.c | 11 ++++++++++-
+ arch/riscv/mm/init.c      | 10 ++++++----
+ 3 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index 504ba38..0e66993 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -22,6 +22,7 @@ config RISCV
+ 	select GENERIC_ATOMIC64 if !64BIT || !RISCV_ISA_A
+ 	select ARCH_WANT_OPTIONAL_GPIOLIB
+ 	select HAVE_MEMBLOCK
++	select HAVE_MEMBLOCK_NODE_MAP
+ 	select HAVE_DMA_API_DEBUG
+ 	select HAVE_DMA_CONTIGUOUS
+ 	select HAVE_GENERIC_DMA_COHERENT
+@@ -43,6 +44,10 @@ config MMU
+ config ARCH_PHYS_ADDR_T_64BIT
+ 	def_bool y
+ 
++config ZONE_DMA32
++	bool
++	default y
++
+ config ARCH_DMA_ADDR_T_64BIT
+ 	def_bool y
+ 
+diff --git a/arch/riscv/kernel/setup.c b/arch/riscv/kernel/setup.c
+index c6d095f..a8ea808 100644
+--- a/arch/riscv/kernel/setup.c
++++ b/arch/riscv/kernel/setup.c
+@@ -171,7 +171,7 @@ static void __init setup_bootmem(void)
+ 	BUG_ON(mem_size == 0);
+ 
+ 	set_max_mapnr(PFN_DOWN(mem_size));
+-	max_low_pfn = pfn_base + PFN_DOWN(mem_size);
++	max_low_pfn = memblock_end_of_DRAM();
+ 
+ #ifdef CONFIG_BLK_DEV_INITRD
+ 	setup_initrd();
+@@ -181,6 +181,15 @@ static void __init setup_bootmem(void)
+ 	early_init_fdt_scan_reserved_mem();
+ 	memblock_allow_resize();
+ 	memblock_dump_all();
++
++	for_each_memblock(memory, reg) {
++		unsigned long start_pfn = memblock_region_memory_base_pfn(reg);
++		unsigned long end_pfn = memblock_region_memory_end_pfn(reg);
++
++		memblock_set_node(PFN_PHYS(start_pfn),
++		                  PFN_PHYS(end_pfn - start_pfn),
++		                  &memblock.memory, 0);
++	}
+ }
+ 
+ void __init setup_arch(char **cmdline_p)
+diff --git a/arch/riscv/mm/init.c b/arch/riscv/mm/init.c
+index 9f4bee5..a6c0e8e 100644
+--- a/arch/riscv/mm/init.c
++++ b/arch/riscv/mm/init.c
+@@ -17,6 +17,7 @@
+ #include <linux/initrd.h>
+ #include <linux/memblock.h>
+ #include <linux/swap.h>
++#include <linux/sizes.h>
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/sections.h>
+@@ -25,11 +26,12 @@
+ 
+ static void __init zone_sizes_init(void)
+ {
+-	unsigned long zones_size[MAX_NR_ZONES];
++	unsigned long max_zone_pfns[MAX_NR_ZONES] = { 0, };
+ 
+-	memset(zones_size, 0, sizeof(zones_size));
+-	zones_size[ZONE_NORMAL] = max_mapnr;
+-	free_area_init_node(0, zones_size, pfn_base, NULL);
++	max_zone_pfns[ZONE_DMA32] = PFN_DOWN(min(4UL * SZ_1G, max_low_pfn));
++	max_zone_pfns[ZONE_NORMAL] = max_low_pfn;
++
++	free_area_init_nodes(max_zone_pfns);
+ }
+ 
+ void setup_zero_page(void)
+-- 
+2.7.4
+

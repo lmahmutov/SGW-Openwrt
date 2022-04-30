@@ -1,0 +1,287 @@
+From 10626c32e3827bca560217966f5bd586c4e91584 Mon Sep 17 00:00:00 2001
+From: Alan Kao <nonerkao@gmail.com>
+Date: Mon, 18 Dec 2017 17:52:48 +0800
+Subject: [PATCH 04/49] riscv/ftrace: Add basic support
+
+This patch contains basic ftrace support for RV64I platform.
+Specifically, function tracer (HAVE_FUNCTION_TRACER), function graph
+tracer (HAVE_FUNCTION_GRAPH_TRACER), and a frame pointer test
+(HAVE_FUNCTION_GRAPH_FP_TEST) are implemented following the
+instructions in Documentation/trace/ftrace-design.txt.
+
+Note that the functions in both ftrace.c and setup.c should not be
+hooked with the compiler's -pg option: to prevent infinite self-
+referencing for the former, and to ignore early setup stuff for the
+latter.
+
+Signed-off-by: Alan Kao <alankao@andestech.com>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/Kconfig              |   5 ++
+ arch/riscv/include/asm/Kbuild   |   1 -
+ arch/riscv/include/asm/ftrace.h |  10 ++++
+ arch/riscv/kernel/Makefile      |   7 +++
+ arch/riscv/kernel/ftrace.c      |  41 +++++++++++++
+ arch/riscv/kernel/mcount.S      | 126 ++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 189 insertions(+), 1 deletion(-)
+ create mode 100644 arch/riscv/include/asm/ftrace.h
+ create mode 100644 arch/riscv/kernel/ftrace.c
+ create mode 100644 arch/riscv/kernel/mcount.S
+
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index 2c6adf1..504ba38 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -55,6 +55,9 @@ config PAGE_OFFSET
+ config STACKTRACE_SUPPORT
+ 	def_bool y
+ 
++config TRACE_IRQFLAGS_SUPPORT
++	def_bool y
++
+ config RWSEM_GENERIC_SPINLOCK
+ 	def_bool y
+ 
+@@ -107,6 +110,8 @@ config ARCH_RV64I
+ 	bool "RV64I"
+ 	select CPU_SUPPORTS_64BIT_KERNEL
+ 	select 64BIT
++	select HAVE_FUNCTION_TRACER
++	select HAVE_FUNCTION_GRAPH_TRACER
+ 
+ endchoice
+ 
+diff --git a/arch/riscv/include/asm/Kbuild b/arch/riscv/include/asm/Kbuild
+index 970460a..b44a424 100644
+--- a/arch/riscv/include/asm/Kbuild
++++ b/arch/riscv/include/asm/Kbuild
+@@ -12,7 +12,6 @@ generic-y += errno.h
+ generic-y += exec.h
+ generic-y += fb.h
+ generic-y += fcntl.h
+-generic-y += ftrace.h
+ generic-y += futex.h
+ generic-y += hardirq.h
+ generic-y += hash.h
+diff --git a/arch/riscv/include/asm/ftrace.h b/arch/riscv/include/asm/ftrace.h
+new file mode 100644
+index 0000000..66d4175
+--- /dev/null
++++ b/arch/riscv/include/asm/ftrace.h
+@@ -0,0 +1,10 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/* Copyright (C) 2017 Andes Technology Corporation */
++
++/*
++ * The graph frame test is not possible if CONFIG_FRAME_POINTER is not enabled.
++ * Check arch/riscv/kernel/mcount.S for detail.
++ */
++#if defined(CONFIG_FUNCTION_GRAPH_TRACER) && defined(CONFIG_FRAME_POINTER)
++#define HAVE_FUNCTION_GRAPH_FP_TEST
++#endif
+diff --git a/arch/riscv/kernel/Makefile b/arch/riscv/kernel/Makefile
+index ab8baf7..196f62f 100644
+--- a/arch/riscv/kernel/Makefile
++++ b/arch/riscv/kernel/Makefile
+@@ -2,6 +2,11 @@
+ # Makefile for the RISC-V Linux kernel
+ #
+ 
++ifdef CONFIG_FTRACE
++CFLAGS_REMOVE_ftrace.o = -pg
++CFLAGS_REMOVE_setup.o = -pg
++endif
++
+ extra-y += head.o
+ extra-y += vmlinux.lds
+ 
+@@ -29,5 +34,7 @@ CFLAGS_setup.o := -mcmodel=medany
+ obj-$(CONFIG_SMP)		+= smpboot.o
+ obj-$(CONFIG_SMP)		+= smp.o
+ obj-$(CONFIG_MODULES)		+= module.o
++obj-$(CONFIG_FUNCTION_TRACER)	+= mcount.o
++obj-$(CONFIG_FUNCTION_GRAPH_TRACER)	+= ftrace.o
+ 
+ clean:
+diff --git a/arch/riscv/kernel/ftrace.c b/arch/riscv/kernel/ftrace.c
+new file mode 100644
+index 0000000..d0de68d
+--- /dev/null
++++ b/arch/riscv/kernel/ftrace.c
+@@ -0,0 +1,41 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) 2013 Linaro Limited
++ * Author: AKASHI Takahiro <takahiro.akashi@linaro.org>
++ * Copyright (C) 2017 Andes Technology Corporation
++ */
++
++#include <linux/ftrace.h>
++
++/*
++ * Most of this file is copied from arm64.
++ */
++void prepare_ftrace_return(unsigned long *parent, unsigned long self_addr,
++			   unsigned long frame_pointer)
++{
++	unsigned long return_hooker = (unsigned long)&return_to_handler;
++	unsigned long old;
++	struct ftrace_graph_ent trace;
++	int err;
++
++	if (unlikely(atomic_read(&current->tracing_graph_pause)))
++		return;
++
++	/*
++	 * We don't suffer access faults, so no extra fault-recovery assembly
++	 * is needed here.
++	 */
++	old = *parent;
++
++	trace.func = self_addr;
++	trace.depth = current->curr_ret_stack + 1;
++
++	if (!ftrace_graph_entry(&trace))
++		return;
++
++	err = ftrace_push_return_trace(old, self_addr, &trace.depth,
++				       frame_pointer, NULL);
++	if (err == -EBUSY)
++		return;
++	*parent = return_hooker;
++}
+diff --git a/arch/riscv/kernel/mcount.S b/arch/riscv/kernel/mcount.S
+new file mode 100644
+index 0000000..c46a778
+--- /dev/null
++++ b/arch/riscv/kernel/mcount.S
+@@ -0,0 +1,126 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/* Copyright (C) 2017 Andes Technology Corporation */
++
++#include <linux/init.h>
++#include <linux/linkage.h>
++#include <asm/asm.h>
++#include <asm/csr.h>
++#include <asm/unistd.h>
++#include <asm/thread_info.h>
++#include <asm/asm-offsets.h>
++#include <asm-generic/export.h>
++#include <asm/ftrace.h>
++
++	.text
++
++	.macro SAVE_ABI_STATE
++	addi	sp, sp, -16
++	sd	s0, 0(sp)
++	sd	ra, 8(sp)
++	addi	s0, sp, 16
++	.endm
++
++	/*
++	 * The call to ftrace_return_to_handler would overwrite the return
++	 * register if a0 was not saved.
++	 */
++	.macro SAVE_RET_ABI_STATE
++	addi	sp, sp, -32
++	sd	s0, 16(sp)
++	sd	ra, 24(sp)
++	sd	a0, 8(sp)
++	addi	s0, sp, 32
++	.endm
++
++	.macro STORE_ABI_STATE
++	ld	ra, 8(sp)
++	ld	s0, 0(sp)
++	addi	sp, sp, 16
++	.endm
++
++	.macro STORE_RET_ABI_STATE
++	ld	ra, 24(sp)
++	ld	s0, 16(sp)
++	ld	a0, 8(sp)
++	addi	sp, sp, 32
++	.endm
++
++ENTRY(ftrace_stub)
++	ret
++ENDPROC(ftrace_stub)
++
++#ifdef CONFIG_FUNCTION_GRAPH_TRACER
++ENTRY(return_to_handler)
++/*
++ * On implementing the frame point test, the ideal way is to compare the
++ * s0 (frame pointer, if enabled) on entry and the sp (stack pointer) on return.
++ * However, the psABI of variable-length-argument functions does not allow this.
++ *
++ * So alternatively we check the *old* frame pointer position, that is, the
++ * value stored in -16(s0) on entry, and the s0 on return.
++ */
++#ifdef HAVE_FUNCTION_GRAPH_FP_TEST
++	mv	t6, s0
++#endif
++	SAVE_RET_ABI_STATE
++#ifdef HAVE_FUNCTION_GRAPH_FP_TEST
++	mv	a0, t6
++#endif
++	la	t0, ftrace_return_to_handler
++	jalr	t0
++	mv	a1, a0
++	STORE_RET_ABI_STATE
++	jalr	a1
++ENDPROC(return_to_handler)
++EXPORT_SYMBOL(return_to_handler)
++#endif
++
++ENTRY(_mcount)
++	la	t4, ftrace_stub
++#ifdef CONFIG_FUNCTION_GRAPH_TRACER
++	la	t0, ftrace_graph_return
++	ld	t1, 0(t0)
++	bne	t1, t4, do_ftrace_graph_caller
++
++	la	t3, ftrace_graph_entry
++	ld	t2, 0(t3)
++	la	t6, ftrace_graph_entry_stub
++	bne	t2, t6, do_ftrace_graph_caller
++#endif
++	la	t3, ftrace_trace_function
++	ld	t5, 0(t3)
++	bne	t5, t4, do_trace
++	ret
++
++#ifdef CONFIG_FUNCTION_GRAPH_TRACER
++/*
++ * A pseudo representation for the function graph tracer:
++ * prepare_to_return(&ra_to_caller_of_caller, ra_to_caller)
++ */
++do_ftrace_graph_caller:
++	addi	a0, s0, -8
++	mv	a1, ra
++#ifdef HAVE_FUNCTION_GRAPH_FP_TEST
++	ld	a2, -16(s0)
++#endif
++	SAVE_ABI_STATE
++	la	t0, prepare_ftrace_return
++	jalr	t0
++	STORE_ABI_STATE
++	ret
++#endif
++
++/*
++ * A pseudo representation for the function tracer:
++ * (*ftrace_trace_function)(ra_to_caller, ra_to_caller_of_caller)
++ */
++do_trace:
++	ld	a1, -8(s0)
++	mv	a0, ra
++
++	SAVE_ABI_STATE
++	jalr	t5
++	STORE_ABI_STATE
++	ret
++ENDPROC(_mcount)
++EXPORT_SYMBOL(_mcount)
+-- 
+2.7.4
+

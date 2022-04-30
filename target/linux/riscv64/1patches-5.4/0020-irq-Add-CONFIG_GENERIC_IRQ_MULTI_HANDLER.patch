@@ -1,0 +1,94 @@
+From ade9b6ca3f6ff80d3f4694e43ba5f96cadef0d65 Mon Sep 17 00:00:00 2001
+From: Palmer Dabbelt <palmer@sifive.com>
+Date: Thu, 25 Jan 2018 08:10:30 -0800
+Subject: [PATCH 20/49] irq: Add CONFIG_GENERIC_IRQ_MULTI_HANDLER
+
+It looks like the arm irqchip registration mechanism has been copied
+into a handful of ports, including arm64 and openrisc.  I want to use
+this in the RISC-V port, so I thought it would be good to make this
+generic instead.
+
+This patch copies the arm definition of CONFIG_MULTI_IRQ_HANDLER into
+kernel/irq under CONFIG_GENERIC_MULTI_IRQ_HANDLER.  This patch is
+currently all dead code, but it will be enabled in the various other
+architectures in subsequent patches.
+
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ include/linux/irq.h | 18 ++++++++++++++++++
+ kernel/irq/Kconfig  |  5 +++++
+ kernel/irq/handle.c | 14 ++++++++++++++
+ 3 files changed, 37 insertions(+)
+
+diff --git a/include/linux/irq.h b/include/linux/irq.h
+index a0231e9..2930fd2 100644
+--- a/include/linux/irq.h
++++ b/include/linux/irq.h
+@@ -1170,4 +1170,22 @@ int __ipi_send_mask(struct irq_desc *desc, const struct cpumask *dest);
+ int ipi_send_single(unsigned int virq, unsigned int cpu);
+ int ipi_send_mask(unsigned int virq, const struct cpumask *dest);
+ 
++#ifdef CONFIG_GENERIC_IRQ_MULTI_HANDLER
++/*
++ * Registers a generic IRQ handling function as the top-level IRQ handler in
++ * the system, which is generally the first C code called from an assembly
++ * architecture-specific interrupt handler.
++ *
++ * Returns 0 on success, or -EBUSY if an IRQ handler has already been
++ * registered.
++ */
++void __init set_handle_irq(void (*handle_irq)(struct pt_regs *));
++
++/*
++ * Allows interrupt handlers to find the irqchip that's been registered as the
++ * top-level IRQ handler.
++ */
++extern void (*handle_arch_irq)(struct pt_regs *) __ro_after_init;
++#endif
++
+ #endif /* _LINUX_IRQ_H */
+diff --git a/kernel/irq/Kconfig b/kernel/irq/Kconfig
+index 89e3558..e9f76d1 100644
+--- a/kernel/irq/Kconfig
++++ b/kernel/irq/Kconfig
+@@ -142,3 +142,8 @@ config GENERIC_IRQ_DEBUGFS
+ 	  If you don't know what to do here, say N.
+ 
+ endmenu
++
++config GENERIC_IRQ_MULTI_HANDLER
++	bool
++	help
++	  Allow each machine to specify it's own IRQ handler at run time.
+diff --git a/kernel/irq/handle.c b/kernel/irq/handle.c
+index 79f987b..dee4f9a 100644
+--- a/kernel/irq/handle.c
++++ b/kernel/irq/handle.c
+@@ -20,6 +20,10 @@
+ 
+ #include "internals.h"
+ 
++#ifdef CONFIG_GENERIC_IRQ_MULTI_HANDLER
++void (*handle_arch_irq)(struct pt_regs *) __ro_after_init;
++#endif
++
+ /**
+  * handle_bad_irq - handle spurious and unhandled irqs
+  * @desc:      description of the interrupt
+@@ -207,3 +211,13 @@ irqreturn_t handle_irq_event(struct irq_desc *desc)
+ 	irqd_clear(&desc->irq_data, IRQD_IRQ_INPROGRESS);
+ 	return ret;
+ }
++
++#ifdef CONFIG_GENERIC_IRQ_MULTI_HANDLER
++void __init set_handle_irq(void (*handle_irq)(struct pt_regs *))
++{
++	if (handle_arch_irq)
++		return;
++
++	handle_arch_irq = handle_irq;
++}
++#endif
+-- 
+2.7.4
+

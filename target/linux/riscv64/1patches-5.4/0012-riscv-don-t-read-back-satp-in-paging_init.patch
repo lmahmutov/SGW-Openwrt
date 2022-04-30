@@ -1,0 +1,30 @@
+From ed53e1812f1834ec8a88dcb07c5b5b95b105ae53 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 9 Jan 2018 15:00:36 +0100
+Subject: [PATCH 12/49] riscv: don't read back satp in paging_init
+
+init_mm.pgd (aka swapped_pgd) gets relocated like all other kernel
+symbols by the elf loader, so there is no need to reload it from satp.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Palmer Dabbelt <palmer@sifive.com>
+---
+ arch/riscv/mm/init.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/riscv/mm/init.c b/arch/riscv/mm/init.c
+index a6c0e8e..c77df81 100644
+--- a/arch/riscv/mm/init.c
++++ b/arch/riscv/mm/init.c
+@@ -41,8 +41,6 @@ void setup_zero_page(void)
+ 
+ void __init paging_init(void)
+ {
+-	init_mm.pgd = (pgd_t *)pfn_to_virt(csr_read(sptbr));
+-
+ 	setup_zero_page();
+ 	local_flush_tlb_all();
+ 	zone_sizes_init();
+-- 
+2.7.4
+
