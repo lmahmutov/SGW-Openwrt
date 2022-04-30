@@ -49,8 +49,8 @@ index 3d9168cb..c3d1b357 100644
 +		display-timings {
 +			timing0: timing0 {
 +				clock-frequency = <33000000>;
-+				hactive = <480>;
-+				vactive = <272>;
++				hactive = <800>;
++				vactive = <480>;
 +
 +				hfront-porch = <40>;
 +				hsync-len = <1>;
@@ -332,7 +332,7 @@ diff --git a/configs/LicheePi_Zero_defconfig b/configs/LicheePi_Zero_defconfig
 index 04d7b645..83d785a4 100644
 --- a/configs/LicheePi_Zero_defconfig
 +++ b/configs/LicheePi_Zero_defconfig
-@@ -3,5 +3,9 @@ CONFIG_ARCH_SUNXI=y
+@@ -3,5 +3,15 @@ CONFIG_ARCH_SUNXI=y
  CONFIG_SPL=y
  CONFIG_MACH_SUN8I_V3S=y
  CONFIG_DRAM_CLK=360
@@ -341,6 +341,12 @@ index 04d7b645..83d785a4 100644
 +CONFIG_DM_REGULATOR=y
 +CONFIG_DM_PWM=y
 +CONFIG_PWM_SUNXI=y
++CONFIG_CMD_BMP=y
++CONFIG_BMP_24BPP=y
++CONFIG_SPLASH_SCREEN=y
++CONFIG_SPLASHIMAGE_GUARD=y
++CONFIG_SPLASH_SCREEN_ALIGN=y
++CONFIG_SPLASH_SOURCE=y
  # CONFIG_NETDEVICES is not set
 
 diff --git a/drivers/pwm/sunxi_pwm.c b/drivers/pwm/sunxi_pwm.c
