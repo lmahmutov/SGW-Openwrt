@@ -20,7 +20,7 @@ include $(INCLUDE_DIR)/package.mk
 
 # application package
 define Package/gol
-	CATEGORY:=game
+	CATEGORY:=Game
 	TITLE:=Conway's Game of Lif
 endef
 
