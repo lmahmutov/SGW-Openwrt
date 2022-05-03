@@ -60,26 +60,19 @@ static int *zoom_y_tab;
 extern int InitJoypadInput(void);
 extern int GetJoypadInput(void);
 
-static int lcd_fb_display_px(WORD color, int x, int y)
+long int lcd_bits_per_pixel;
+static int lcd_fb_display_px(unsigned int color, int x, int y)
 {
-	// unsigned char  *pen8;
-	// unsigned short *pen16;
-	// pen8 = (unsigned char *)(fb_mem + y*line_width + x*px_width);
-	// pen16 = (unsigned short *)pen8;
-	// *pen16 = color;
-	
-	// return 0;
-
-    //修改InfoNES_System_Linux.cpp文件中的static int lcd_fb_display_px函数（调整spi屏幕的颜色）：
-	WORD *pen16;
+	DWORD *pen32;
+	DWORD arg8888;
 	unsigned char r, g, b;
 	r = ((color >> 10) & 0x1f);
 	g = ((color >> 5) & 0x3f);
 	b = (color & 0x1f);
 
-	color = r<<11|g<<6|b;
-	pen16 = (WORD *)(fb_mem + y*line_width + x*px_width);
-	*pen16 = color;
+	arg8888 = 255<<24|r<<19|g<<10|b<<3;
+	pen32 = (DWORD *)(fb_mem + y*line_width + x*px_width);
+	*pen32 = arg8888 ;
 	return 0;
 }
 
@@ -102,12 +95,13 @@ static int lcd_fb_init()
 	
 	//计算参数
 	px_width     = var.bits_per_pixel / 8;
+	lcd_bits_per_pixel = var.bits_per_pixel;
 	line_width   = var.xres * px_width;
 	screen_width = var.yres * line_width;
 	lcd_width    = var.xres;
 	lcd_height   = var.yres;
 	
-	printf("fb width:%d height:%d \n", lcd_width, lcd_height);
+	printf("fb width:%d height:%d bit per pixel:%d \n", lcd_width, lcd_height, lcd_bits_per_pixel);
 
 	fb_mem = (unsigned char *)mmap(NULL, screen_width, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
 	if(fb_mem == (void *)-1)
