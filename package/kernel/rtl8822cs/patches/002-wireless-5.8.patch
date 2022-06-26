@@ -1,0 +1,30 @@
+--- a/os_dep/linux/ioctl_cfg80211.c
++++ b/os_dep/linux/ioctl_cfg80211.c
+@@ -7557,6 +7557,15 @@
+ }
+ #endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)) || defined(BUILD_OPENWRT)
++static void cfg80211_rtw_update_mgmt_frame_registrations(struct wiphy *wiphy,
++                                                  struct wireless_dev *wdev,
++                                                  struct mgmt_frame_regs *upd)
++{
++
++}
++#endif
++
+ #if defined(CONFIG_TDLS) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
+ static int cfg80211_rtw_tdls_mgmt(struct wiphy *wiphy,
+ 	struct net_device *ndev,
+@@ -9933,7 +9942,10 @@
+ 	.update_ft_ies = cfg80211_rtw_update_ft_ies,
+ #endif
+ 
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)) || defined(BUILD_OPENWRT)
++       .mgmt_tx = cfg80211_rtw_mgmt_tx,
++       .update_mgmt_frame_registrations = cfg80211_rtw_update_mgmt_frame_registrations,
++#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)) || defined(COMPAT_KERNEL_RELEASE)
+ 	.mgmt_tx = cfg80211_rtw_mgmt_tx,
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
+ 	.mgmt_frame_register = cfg80211_rtw_mgmt_frame_register,
