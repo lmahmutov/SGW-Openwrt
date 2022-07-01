@@ -81,7 +81,7 @@ endef
 
 define Device/ntv-s905x
   DEVICE_DTS := amlogic/meson-gxl-s905x-uhd300x
-  DEVICE_PACKAGES += odroid-firmware-c2 u-boot-odroid-c2
+  DEVICE_PACKAGES := kmod-rtl8822cs wpad-basic-wolfssl
   DEVICE_TITLE := NTV+ S905X
   IMAGES := sdcard.img.gz
   IMAGE/sdcard.img.gz := mesongx-sdcard | append-metadata | gzip
