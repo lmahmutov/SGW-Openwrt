@@ -5,10 +5,10 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-PKG_VERSION:=2021.01
+PKG_VERSION:=2022.10-rc1
 PKG_RELEASE:=1
 
-PKG_HASH:=b407e1510a74e863b8b5cb42a24625344f0e0c2fc7582d8c866bd899367d0454
+PKG_HASH:=6d69d5e4635cb3fa7852bf15f88ca342ef7740196e71961d3572deb58ba44bea
 
 PKG_MAINTAINER:=Tobias Maedel <openwrt@tbspace.de>
 
@@ -62,7 +62,7 @@ define U-Boot/h68k-opc-board-rk3568
   BUILD_SUBTARGET:=armv8
   NAME:=H68K OPC Board
   BUILD_DEVICES:= \
-       hinlink_h68k-opc-board
+       evb_rk3568
   DEPENDS:=+PACKAGE_u-boot-h68k-opc-board-rk3568:arm-trusted-firmware-rk3568
   PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
   ATF:=rk3568_bl31_v1.28.elf
@@ -78,7 +78,8 @@ UBOOT_TARGETS := \
 UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 
 UBOOT_MAKE_FLAGS += \
-  BL31=$(STAGING_DIR_IMAGE)/$(ATF)
+  BL31=$(STAGING_DIR_IMAGE)/$(ATF) \
+  HOSTLOADLIBES_mkimage="-pthread -lcrypto -lssl"
 
 define Build/Configure
 	$(call Build/Configure/U-Boot)
