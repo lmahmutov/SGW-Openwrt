@@ -58,10 +58,22 @@ define U-Boot/rockpro64-rk3399
   ATF:=rk3399_bl31.elf
 endef
 
+define U-Boot/h68k-opc-board-rk3568
+  BUILD_SUBTARGET:=armv8
+  NAME:=H68K OPC Board
+  BUILD_DEVICES:= \
+       hinlink_h68k-opc-board
+  DEPENDS:=+PACKAGE_u-boot-h68k-opc-board-rk3568:arm-trusted-firmware-rk3568
+  PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
+  ATF:=rk3568_bl31_v1.28.elf
+  TPL:=rk3568_ddr_1560MHz_v1.11.bin
+endef
+
 UBOOT_TARGETS := \
   rock-pi-4-rk3399 \
   rockpro64-rk3399 \
-  nanopi-r2s-rk3328
+  nanopi-r2s-rk3328 \
+  h68k-opc-board-rk3568
 
 UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 

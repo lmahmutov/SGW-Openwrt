@@ -30,3 +30,12 @@ define Device/radxa_rock-pi-4
   IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
 endef
 TARGET_DEVICES += radxa_rock-pi-4
+
+define Device/hinlink_h68k-opc-board
+  DEVICE_VENDOR := Hinlink
+  DEVICE_MODEL := H68K OPC Board
+  SOC := rk3568
+  UBOOT_DEVICE_NAME := h68k-opc-board-rk3568
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script h68k | pine64-img | gzip | append-metadata
+endef
+TARGET_DEVICES += hinlink_h68k-opc-board
