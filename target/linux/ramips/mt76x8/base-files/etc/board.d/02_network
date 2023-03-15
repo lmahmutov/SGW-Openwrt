@@ -29,7 +29,8 @@ ramips_setup_interfaces()
 	tplink,tl-wr802n-v4|\
 	tplink,tl-wa801nd-v5|\
 	widora,neo-16m|\
-	widora,neo-32m)
+	widora,neo-32m|\
+	sgw,homed-32m)
 		ucidef_add_switch "switch0"
 		ucidef_add_switch_attr "switch0" "enable" "false"
 		ucidef_set_interface_lan "eth0"

@@ -1,9 +1,0 @@
-WIFI_SSID="SmartGateway"
-uci -q batch << EOF
-set network.lan.proto=dhcp
-delete network.lan.ipaddr
-delete network.lan.netmask
-commit network
-set wireless.@wifi-iface[0].ssid=${WIFI_SSID}
-commit wireless
-EOF

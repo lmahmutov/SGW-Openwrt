@@ -355,6 +355,15 @@ define Device/ravpower_rp-wd009
 endef
 TARGET_DEVICES += ravpower_rp-wd009
 
+define Device/sgw_homed-32m
+  IMAGE_SIZE := 32448k
+  DEVICE_VENDOR := SmartGateway
+  DEVICE_MODEL := Homed-001
+  DEVICE_VARIANT := 32M
+  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci
+endef
+TARGET_DEVICES += sgw_homed-32m
+
 define Device/skylab_skw92a
   IMAGE_SIZE := 16064k
   DEVICE_VENDOR := Skylab
