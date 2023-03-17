@@ -55,7 +55,7 @@
 		spi-max-frequency = <32000000>;
 		fps = <30>;
 		buswidth = <8>;
-		//rotation = <270>;
+		rotate = <270>;
 		dc-gpios = <&gpio 2 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
 		led-gpios = <&gpio 1 GPIO_ACTIVE_HIGH>;
