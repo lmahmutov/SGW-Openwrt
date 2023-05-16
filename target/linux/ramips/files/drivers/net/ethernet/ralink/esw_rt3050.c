@@ -17,11 +17,14 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <asm/mach-ralink/ralink_regs.h>
+#include <linux/of_device.h>
 #include <linux/of_irq.h>
 
 #include <linux/switch.h>
+#include <linux/reset.h>
 
 #include "mtk_eth_soc.h"
+#include "esw_rt3050.h"
 
 /* HW limitations for this switch:
  * - No large frame support (PKT_MAX_LEN at most 1536)
@@ -76,6 +79,7 @@
 #define RT305X_ESW_LED_100MACT		8
 /* Additional led states not in datasheet: */
 #define RT305X_ESW_LED_BLINK		10
+#define RT305X_ESW_LED_OFF		11
 #define RT305X_ESW_LED_ON		12
 
 #define RT305X_ESW_LINK_S		25
@@ -171,8 +175,7 @@
 #define RT305X_ESW_NUM_LEDS		5
 
 #define RT5350_ESW_REG_PXTPC(_x)	(0x150 + (4 * _x))
-#define RT5350_EWS_REG_LED_POLARITY	0x168
-#define RT5350_RESET_EPHY		BIT(24)
+#define RT5350_EWS_REG_LED_CONTROL	0x168
 
 enum {
 	/* Global attributes. */
@@ -215,6 +218,7 @@ struct rt305x_esw {
 	struct device		*dev;
 	void __iomem		*base;
 	int			irq;
+	struct fe_priv		*priv;
 
 	/* Protects against concurrent register r/w operations. */
 	spinlock_t		reg_rw_lock;
@@ -224,6 +228,7 @@ struct rt305x_esw {
 	unsigned int		reg_initval_fct2;
 	unsigned int		reg_initval_fpa2;
 	unsigned int		reg_led_polarity;
+	unsigned int		reg_led_source;
 
 	struct switch_dev	swdev;
 	bool			global_vlan_enable;
@@ -232,6 +237,8 @@ struct rt305x_esw {
 	int			led_frequency;
 	struct esw_vlan vlans[RT305X_ESW_NUM_VLANS];
 	struct esw_port ports[RT305X_ESW_NUM_PORTS];
+	struct reset_control	*rst_esw;
+	struct reset_control	*rst_ephy;
 
 };
 
@@ -252,6 +259,29 @@ static inline void esw_rmw_raw(struct rt305x_esw *esw, unsigned reg,
 
 	t = __raw_readl(esw->base + reg) & ~mask;
 	__raw_writel(t | val, esw->base + reg);
+}
+
+static void esw_reset(struct rt305x_esw *esw)
+{
+	if (!esw->rst_esw)
+		return;
+
+	reset_control_assert(esw->rst_esw);
+	usleep_range(60, 120);
+	reset_control_deassert(esw->rst_esw);
+	/* the esw takes long to reset otherwise the board hang */
+	msleep(10);
+}
+
+static void esw_reset_ephy(struct rt305x_esw *esw)
+{
+	if (!esw->rst_ephy)
+		return;
+
+	reset_control_assert(esw->rst_ephy);
+	usleep_range(60, 120);
+	reset_control_deassert(esw->rst_ephy);
+	usleep_range(60, 120);
 }
 
 static void esw_rmw(struct rt305x_esw *esw, unsigned reg,
@@ -436,6 +466,8 @@ static void esw_hw_init(struct rt305x_esw *esw)
 	u8 port_disable = 0;
 	u8 port_map = RT305X_ESW_PMAP_LLLLLL;
 
+	esw_reset(esw);
+
 	/* vodoo from original driver */
 	esw_w32(esw, 0xC8A07850, RT305X_ESW_REG_FCT0);
 	esw_w32(esw, 0x00000000, RT305X_ESW_REG_SGC2);
@@ -487,11 +519,11 @@ static void esw_hw_init(struct rt305x_esw *esw)
 	esw_w32(esw, 0x00000000, RT305X_ESW_REG_FPA);
 
 	/* Force Link/Activity on ports */
-	esw_w32(esw, 0x00000005, RT305X_ESW_REG_P0LED);
-	esw_w32(esw, 0x00000005, RT305X_ESW_REG_P1LED);
-	esw_w32(esw, 0x00000005, RT305X_ESW_REG_P2LED);
-	esw_w32(esw, 0x00000005, RT305X_ESW_REG_P3LED);
-	esw_w32(esw, 0x00000005, RT305X_ESW_REG_P4LED);
+	esw_w32(esw, RT305X_ESW_LED_LINKACT, RT305X_ESW_REG_P0LED);
+	esw_w32(esw, RT305X_ESW_LED_LINKACT, RT305X_ESW_REG_P1LED);
+	esw_w32(esw, RT305X_ESW_LED_LINKACT, RT305X_ESW_REG_P2LED);
+	esw_w32(esw, RT305X_ESW_LED_LINKACT, RT305X_ESW_REG_P3LED);
+	esw_w32(esw, RT305X_ESW_LED_LINKACT, RT305X_ESW_REG_P4LED);
 
 	/* Copy disabled port configuration from device tree setup */
 	port_disable = esw->port_disable;
@@ -505,8 +537,7 @@ static void esw_hw_init(struct rt305x_esw *esw)
 		esw->ports[i].disable = (port_disable & (1 << i)) != 0;
 
 	if (ralink_soc == RT305X_SOC_RT3352) {
-		/* reset EPHY */
-		fe_reset(RT5350_RESET_EPHY);
+		esw_reset_ephy(esw);
 
 		rt305x_mii_write(esw, 0, 31, 0x8000);
 		for (i = 0; i < 5; i++) {
@@ -556,12 +587,11 @@ static void esw_hw_init(struct rt305x_esw *esw)
 		/* select local register */
 		rt305x_mii_write(esw, 0, 31, 0x8000);
 	} else if (ralink_soc == RT305X_SOC_RT5350) {
-		/* reset EPHY */
-		fe_reset(RT5350_RESET_EPHY);
+		esw_reset_ephy(esw);
 
 		/* set the led polarity */
 		esw_w32(esw, esw->reg_led_polarity & 0x1F,
-			RT5350_EWS_REG_LED_POLARITY);
+			RT5350_EWS_REG_LED_CONTROL);
 
 		/* local registers */
 		rt305x_mii_write(esw, 0, 31, 0x8000);
@@ -614,12 +644,12 @@ static void esw_hw_init(struct rt305x_esw *esw)
 	} else if (ralink_soc == MT762X_SOC_MT7628AN || ralink_soc == MT762X_SOC_MT7688) {
 		int i;
 
-		/* reset EPHY */
-		fe_reset(RT5350_RESET_EPHY);
+		esw_reset_ephy(esw);
 
-		/* set the led polarity */
-		esw_w32(esw, esw->reg_led_polarity & 0x1F,
-			RT5350_EWS_REG_LED_POLARITY);
+		/* set the led polarity and led source */
+		esw_w32(esw, (esw->reg_led_polarity & 0x1F) |
+				((esw->reg_led_source << 8) & 0x700),
+				RT5350_EWS_REG_LED_CONTROL);
 
 		rt305x_mii_write(esw, 0, 31, 0x2000); /* change G2 page */
 		rt305x_mii_write(esw, 0, 26, 0x0020);
@@ -711,19 +741,43 @@ static void esw_hw_init(struct rt305x_esw *esw)
 	esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
 }
 
+
+int rt3050_esw_has_carrier(struct fe_priv *priv)
+{
+	struct rt305x_esw *esw = priv->soc->swpriv;
+	u32 link;
+	int i;
+	bool cpuport;
+
+	link = esw_r32(esw, RT305X_ESW_REG_POA);
+	link >>= RT305X_ESW_POA_LINK_SHIFT;
+	cpuport = link & BIT(RT305X_ESW_PORT6);
+	link &= RT305X_ESW_POA_LINK_MASK;
+	for (i = 0; i <= RT305X_ESW_PORT5; i++) {
+		if (priv->link[i] != (link & BIT(i)))
+			dev_info(esw->dev, "port %d link %s\n", i, link & BIT(i) ? "up" : "down");
+		priv->link[i] = link & BIT(i);
+	}
+
+	return !!link && cpuport;
+}
+
 static irqreturn_t esw_interrupt(int irq, void *_esw)
 {
-	struct rt305x_esw *esw = (struct rt305x_esw *)_esw;
+	struct rt305x_esw *esw = (struct rt305x_esw *) _esw;
 	u32 status;
 
 	status = esw_r32(esw, RT305X_ESW_REG_ISR);
 	if (status & RT305X_ESW_PORT_ST_CHG) {
-		u32 link = esw_r32(esw, RT305X_ESW_REG_POA);
-
-		link >>= RT305X_ESW_POA_LINK_SHIFT;
-		link &= RT305X_ESW_POA_LINK_MASK;
-		dev_info(esw->dev, "link changed 0x%02X\n", link);
+		if (!esw->priv)
+			goto out;
+		if (rt3050_esw_has_carrier(esw->priv))
+			netif_carrier_on(esw->priv->netdev);
+		else
+			netif_carrier_off(esw->priv->netdev);
 	}
+
+out:
 	esw_w32(esw, status, RT305X_ESW_REG_ISR);
 
 	return IRQ_HANDLED;
@@ -1351,9 +1405,7 @@ static int esw_probe(struct platform_device *pdev)
 	struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct device_node *np = pdev->dev.of_node;
 	const __be32 *port_map, *port_disable, *reg_init;
-	struct switch_dev *swdev;
 	struct rt305x_esw *esw;
-	int ret;
 
 	esw = devm_kzalloc(&pdev->dev, sizeof(*esw), GFP_KERNEL);
 	if (!esw)
@@ -1385,48 +1437,21 @@ static int esw_probe(struct platform_device *pdev)
 	if (reg_init)
 		esw->reg_led_polarity = be32_to_cpu(*reg_init);
 
-	swdev = &esw->swdev;
-	swdev->of_node = pdev->dev.of_node;
-	swdev->name = "rt305x-esw";
-	swdev->alias = "rt305x";
-	swdev->cpu_port = RT305X_ESW_PORT6;
-	swdev->ports = RT305X_ESW_NUM_PORTS;
-	swdev->vlans = RT305X_ESW_NUM_VIDS;
-	swdev->ops = &esw_ops;
+	reg_init = of_get_property(np, "mediatek,led_source", NULL);
+	if (reg_init)
+		esw->reg_led_source = be32_to_cpu(*reg_init);
 
-	ret = register_switch(swdev, NULL);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "register_switch failed\n");
-		return ret;
-	}
-
-	platform_set_drvdata(pdev, esw);
+	esw->rst_esw = devm_reset_control_get(&pdev->dev, "esw");
+	if (IS_ERR(esw->rst_esw))
+		esw->rst_esw = NULL;
+	esw->rst_ephy = devm_reset_control_get(&pdev->dev, "ephy");
+	if (IS_ERR(esw->rst_ephy))
+		esw->rst_ephy = NULL;
 
 	spin_lock_init(&esw->reg_rw_lock);
+	platform_set_drvdata(pdev, esw);
 
-	esw_hw_init(esw);
-
-	reg_init = of_get_property(np, "ralink,rgmii", NULL);
-	if (reg_init && be32_to_cpu(*reg_init) == 1) {
-		/* 
-		 * External switch connected to RGMII interface. 
-		 * Unregister the switch device after initialization. 
-		 */
-		dev_err(&pdev->dev, "RGMII mode, not exporting switch device.\n");
-		unregister_switch(&esw->swdev);
-		platform_set_drvdata(pdev, NULL);
-		return -ENODEV;
-	}
-
-	ret = devm_request_irq(&pdev->dev, esw->irq, esw_interrupt, 0, "esw",
-			       esw);
-
-	if (!ret) {
-		esw_w32(esw, RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_ISR);
-		esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
-	}
-
-	return ret;
+	return 0;
 }
 
 static int esw_remove(struct platform_device *pdev)
@@ -1446,6 +1471,71 @@ static const struct of_device_id ralink_esw_match[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, ralink_esw_match);
+
+/* called by the ethernet driver to bound with the switch driver */
+int rt3050_esw_init(struct fe_priv *priv)
+{
+	struct device_node *np = priv->switch_np;
+	struct platform_device *pdev = of_find_device_by_node(np);
+	struct switch_dev *swdev;
+	struct rt305x_esw *esw;
+	const __be32 *rgmii;
+	int ret;
+
+	if (!pdev)
+		return -ENODEV;
+
+	if (!of_device_is_compatible(np, ralink_esw_match->compatible))
+		return -EINVAL;
+
+	esw = platform_get_drvdata(pdev);
+	if (!esw)
+		return -EPROBE_DEFER;
+
+	priv->soc->swpriv = esw;
+	esw->priv = priv;
+
+	esw_hw_init(esw);
+
+	rgmii = of_get_property(np, "ralink,rgmii", NULL);
+	if (rgmii && be32_to_cpu(*rgmii) == 1) {
+		/*
+		 * External switch connected to RGMII interface.
+		 * Unregister the switch device after initialization.
+		 */
+		dev_err(&pdev->dev, "RGMII mode, not exporting switch device.\n");
+		unregister_switch(&esw->swdev);
+		platform_set_drvdata(pdev, NULL);
+		return -ENODEV;
+	}
+
+	swdev = &esw->swdev;
+	swdev->of_node = pdev->dev.of_node;
+	swdev->name = "rt305x-esw";
+	swdev->alias = "rt305x";
+	swdev->cpu_port = RT305X_ESW_PORT6;
+	swdev->ports = RT305X_ESW_NUM_PORTS;
+	swdev->vlans = RT305X_ESW_NUM_VIDS;
+	swdev->ops = &esw_ops;
+
+	ret = register_switch(swdev, NULL);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "register_switch failed\n");
+		return ret;
+	}
+
+	ret = devm_request_irq(&pdev->dev, esw->irq, esw_interrupt, 0, "esw",
+			esw);
+	if (!ret) {
+		esw_w32(esw, RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_ISR);
+		esw_w32(esw, ~RT305X_ESW_PORT_ST_CHG, RT305X_ESW_REG_IMR);
+	}
+
+	dev_info(&pdev->dev, "mediatek esw at 0x%08lx, irq %d initialized\n",
+		 (long unsigned int)esw->base, esw->irq);
+
+	return 0;
+}
 
 static struct platform_driver esw_driver = {
 	.probe = esw_probe,

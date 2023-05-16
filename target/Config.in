@@ -13,6 +13,9 @@ config HAS_SPE_FPU
 config HAS_FPU
 	bool
 
+config HAS_DT_OVERLAY_SUPPORT
+	bool
+
 config AUDIO_SUPPORT
 	bool
 
@@ -49,6 +52,9 @@ config USES_DEVICETREE
 	bool
 
 config USES_INITRAMFS
+	bool
+
+config USES_SEPARATE_INITRAMFS
 	bool
 
 config USES_SQUASHFS
@@ -92,7 +98,13 @@ config HAS_MIPS16
 config RFKILL_SUPPORT
 	bool
 
+config EMMC_SUPPORT
+	bool
+
 config NAND_SUPPORT
+	bool
+
+config LEGACY_SDCARD_SUPPORT
 	bool
 
 config ARCH_64BIT
@@ -163,10 +175,6 @@ config mips64el
 	select ARCH_64BIT
 	bool
 
-config riscv64
-	select ARCH_64BIT
-	bool
-
 config powerpc
 	select BIG_ENDIAN
 	bool
@@ -215,7 +223,6 @@ config ARCH
 	default "mips64el"  if mips64el
 	default "powerpc"   if powerpc
 	default "powerpc64" if powerpc64
-	default "riscv64"   if riscv64
 	default "sh3"       if sh3
 	default "sh3eb"     if sh3eb
 	default "sh4"       if sh4

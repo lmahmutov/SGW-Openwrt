@@ -26,15 +26,14 @@
 
 	pll-data = <0x03000101 0x00000101 0x00001919>;
 
-	mtd-mac-address = <&art 0x0>;
+	nvmem-cells = <&macaddr_art_0>;
+	nvmem-cell-names = "mac-address";
 	phy-mode = "sgmii";
 	phy-handle = <&phy0>;
 };
 
 &mdio0 {
 	status = "okay";
-
-	phy-mask = <0>;
 
 	phy0: ethernet-phy@0 {
 		reg = <0>;
@@ -104,4 +103,14 @@
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
+};
+
+&art {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_art_0: macaddr@0 {
+		reg = <0x0 0x6>;
+	};
 };

@@ -1,8 +1,0 @@
-/** @brief Changed
- *
- * Called when relays rules are added or removed.
- *
- */
-void emberAfPluginCommandRelayChangedCallback(void)
-{
-}

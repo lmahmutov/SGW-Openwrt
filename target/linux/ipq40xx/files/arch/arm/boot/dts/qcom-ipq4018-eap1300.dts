@@ -18,10 +18,6 @@
 			status = "okay";
 		};
 
-		ess-psgmii@98000 {
-			status = "okay";
-		};
-
 		tcsr@1949000 {
 			compatible = "qcom,tcsr";
 			reg = <0x1949000 0x100>;
@@ -45,14 +41,6 @@
 		};
 
 		watchdog@b017000 {
-			status = "okay";
-		};
-
-		ess-switch@c000000 {
-			status = "okay";
-		};
-
-		edma@c080000 {
 			status = "okay";
 		};
 	};
@@ -188,6 +176,17 @@
 				label = "0:ART";
 				reg = <0x00180000 0x00010000>;
 				read-only;
+				compatible = "nvmem-cells";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				precal_art_1000: precal@1000 {
+					reg = <0x1000 0x2f20>;
+				};
+
+				precal_art_5000: precal@5000 {
+					reg = <0x5000 0x2f20>;
+				};
 			};
 			partition8@190000 {
 				compatible = "denx,fit";
@@ -216,20 +215,16 @@
 	status = "okay";
 };
 
-&gmac0 {
-	vlan_tag = <2 0x20>;
-};
-
-&gmac1 {
-	vlan_tag = <1 0x10>;
-};
-
 &wifi0 {
 	status = "okay";
+	nvmem-cell-names = "pre-calibration";
+	nvmem-cells = <&precal_art_1000>;
 	qcom,ath10k-calibration-variant = "EnGenius-EAP1300";
 };
 
 &wifi1 {
 	status = "okay";
+	nvmem-cell-names = "pre-calibration";
+	nvmem-cells = <&precal_art_5000>;
 	qcom,ath10k-calibration-variant = "EnGenius-EAP1300";
 };

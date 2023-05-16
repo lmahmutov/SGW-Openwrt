@@ -11,7 +11,6 @@
 		led-failsafe = &led_system;
 		led-running = &led_system;
 		led-upgrade = &led_system;
-		label-mac-device = &eth1;
 	};
 
 	leds: leds {
@@ -86,14 +85,7 @@
 };
 
 &usb0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port0: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &usb_phy1 {
@@ -101,14 +93,7 @@
 };
 
 &usb1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port1: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &spi {
@@ -149,8 +134,6 @@
 &eth0 {
 	status = "okay";
 
-	mtd-mac-address = <&uboot 0x1fc00>;
-	mtd-mac-address-increment = <1>;
 	phy-handle = <&phy0>;
 	pll-data = <0x56000000 0x00000101 0x00001616>;
 
@@ -163,7 +146,6 @@
 &eth1 {
 	status = "okay";
 
-	mtd-mac-address = <&uboot 0x1fc00>;
 	pll-data = <0x03000101 0x00000101 0x00001616>;
 
 	fixed-link {
@@ -174,7 +156,4 @@
 
 &wmac {
 	status = "okay";
-
-	mtd-cal-data = <&art 0x1000>;
-	mtd-mac-address = <&uboot 0x1fc00>;
 };

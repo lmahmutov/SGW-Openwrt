@@ -42,14 +42,7 @@
 };
 
 &usb {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &usb_phy {
@@ -57,19 +50,15 @@
 };
 
 &ath9k {
-	mtd-mac-address = <&uboot 0x1fc00>;
-	mtd-mac-address-increment = <1>;
-};
-
-&wmac {
-	mtd-mac-address = <&uboot 0x1fc00>;
+	mac-address-increment = <1>;
 };
 
 &eth1 {
 	status = "okay";
 
-	mtd-mac-address = <&uboot 0x1fc00>;
-	mtd-mac-address-increment = <(-1)>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
+	mac-address-increment = <(-1)>;
 
 	gmac-config {
 		device = <&gmac>;
@@ -83,6 +72,7 @@
 
 	phy-handle = <&swphy4>;
 
-	mtd-mac-address = <&uboot 0x1fc00>;
-	mtd-mac-address-increment = <2>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
+	mac-address-increment = <2>;
 };

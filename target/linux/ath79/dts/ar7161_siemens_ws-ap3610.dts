@@ -17,13 +17,6 @@
 		label-mac-device = &eth0;
 	};
 
-	extosc: ref {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-output-names = "ref";
-		clock-frequency = <40000000>;
-	};
-
 	leds {
 		compatible = "gpio-leds";
 
@@ -110,7 +103,7 @@
 	flash@0 {
 		compatible = "jedec,spi-nor";
 		reg = <0>;
-		spi-max-frequency = <25000000>;
+		spi-max-frequency = <50000000>;
 
 		partitions {
 			compatible = "fixed-partitions";

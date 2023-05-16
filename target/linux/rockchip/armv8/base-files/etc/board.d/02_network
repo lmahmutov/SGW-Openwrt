@@ -1,4 +1,3 @@
-#!/bin/sh
 
 . /lib/functions/uci-defaults.sh
 . /lib/functions/system.sh
@@ -8,8 +7,8 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
-	hinlink,h68k-opc-board|\
-	friendlyarm,nanopi-r2s)
+	friendlyarm,nanopi-r2s|\
+	friendlyarm,nanopi-r4s)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
 		;;
 	*)
@@ -18,11 +17,25 @@ rockchip_setup_interfaces()
 	esac
 }
 
-nanopi_r2s_generate_mac()
+nanopi_r4s_get_mac()
 {
-	local sd_hash=$(sha256sum /sys/devices/platform/ff500000.dwmmc/mmc_host/mmc0/mmc0:*/cid)
-	local mac_base=$(macaddr_canonicalize "$(echo "${sd_hash}" | dd bs=1 count=12 2>/dev/null)")
-	echo "$(macaddr_unsetbit_mc "$(macaddr_setbit_la "${mac_base}")")"
+	local interface=$1
+	local eeprom_path="/sys/bus/i2c/devices/2-0051/eeprom"
+	local address
+
+	if [ -f "$eeprom_path" ]; then
+		address=$(get_mac_binary "$eeprom_path" 0xfa)
+		if [ "$interface" = "lan" ]; then
+			address=$(macaddr_setbit_la "$address")
+		fi
+	else
+		address=$(macaddr_generate_from_mmc_cid mmcblk1)
+		if [ "$interface" = "lan" ]; then
+			address=$(macaddr_add "$address" 1)
+		fi
+	fi
+
+	echo "$address"
 }
 
 rockchip_setup_macs()
@@ -33,10 +46,13 @@ rockchip_setup_macs()
 	local label_mac=""
 
 	case "$board" in
-	hinlink,h68k-opc-board|\
 	friendlyarm,nanopi-r2s)
-		wan_mac=$(nanopi_r2s_generate_mac)
-		lan_mac=$(macaddr_add "$wan_mac" +1)
+		wan_mac=$(macaddr_generate_from_mmc_cid mmcblk0)
+		lan_mac=$(macaddr_add "$wan_mac" 1)
+		;;
+	friendlyarm,nanopi-r4s)
+		wan_mac=$(nanopi_r4s_get_mac wan)
+		lan_mac=$(nanopi_r4s_get_mac lan)
 		;;
 	esac
 

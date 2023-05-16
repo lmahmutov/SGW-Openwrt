@@ -112,14 +112,14 @@
 			};
 
 			pll: pll-controller@18050000 {
-				compatible = "qca,qca9550-pll",
-						"qca,qca9550-pll", "syscon";
+				compatible = "qca,qca9550-pll", "syscon";
 				reg = <0x18050000 0x50>;
 
 				#clock-cells = <1>;
 				clock-output-names = "cpu", "ddr", "ahb";
 
 				clocks = <&extosc>;
+				clock-names = "ref";
 			};
 
 			wdt: wdt@18060008 {
@@ -199,6 +199,8 @@
 			interrupt-parent = <&intc2>;
 			interrupts = <1>;
 
+			device_type = "pci";
+
 			resets = <&rst 6>, <&rst 7>;
 			reset-names = "hc", "phy";
 
@@ -234,6 +236,8 @@
 			interrupt-parent = <&intc3>;
 			interrupts = <0>;
 
+			device_type = "pci";
+
 			resets = <&rst2 6>, <&rst2 7>;
 			reset-names = "hc", "phy";
 
@@ -261,6 +265,14 @@
 			phys = <&usb_phy0>;
 
 			status = "disabled";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			hub_port0: port@1 {
+				reg = <1>;
+				#trigger-source-cells = <0>;
+			};
 		};
 
 		usb1: usb@1b400000 {
@@ -279,6 +291,14 @@
 			phys = <&usb_phy1>;
 
 			status = "disabled";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			hub_port1: port@1 {
+				reg = <1>;
+				#trigger-source-cells = <0>;
+			};
 		};
 
 		nand: nand@1b800200 {

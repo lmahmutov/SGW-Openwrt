@@ -11,7 +11,6 @@
 		led-failsafe = &led_system;
 		led-running = &led_system;
 		led-upgrade = &led_system;
-		label-mac-device = &eth0;
 	};
 
 	leds {
@@ -109,14 +108,7 @@
 };
 
 &usb0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port0: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &spi {
@@ -137,8 +129,6 @@
 
 &mdio0 {
 	status = "okay";
-
-	phy-mask = <0>;
 
 	phy0: ethernet-phy@0 {
 		reg = <0>;
@@ -162,13 +152,9 @@
 	pll-data = <0x03000101 0x00000101 0x00001919>;
 
 	phy-mode = "sgmii";
-	mtd-mac-address = <&info 0x8>;
 	phy-handle = <&phy0>;
 };
 
 &wmac {
 	status = "okay";
-
-	mtd-cal-data = <&art 0x1000>;
-	mtd-mac-address = <&info 0x8>;
 };

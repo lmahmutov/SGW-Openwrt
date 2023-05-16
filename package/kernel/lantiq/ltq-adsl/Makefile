@@ -10,7 +10,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=ltq-adsl
 PKG_VERSION:=3.24.4.4
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 PKG_SOURCE:=drv_dsl_cpe_api_danube-$(PKG_VERSION).tar.gz
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/ltq-dsl-$(BUILD_VARIANT)/drv_dsl_cpe_api-$(PKG_VERSION)
 PKG_SOURCE_URL:=@OPENWRT
@@ -45,6 +45,9 @@ endef
 IFX_DSL_MAX_DEVICE=1
 IFX_DSL_LINES_PER_DEVICE=1
 IFX_DSL_CHANNELS_PER_LINE=1
+
+MAKE_FLAGS += \
+	$(KERNEL_MAKE_FLAGS)
 
 CONFIGURE_ARGS += --enable-kernel-include="$(LINUX_DIR)/include" \
 	--with-max-device="$(IFX_DSL_MAX_DEVICE)" \

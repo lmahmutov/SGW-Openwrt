@@ -69,15 +69,10 @@
 			};
 
 			partition@70000 {
+				/* Combine kernel0 & kernel1 */
 				label = "firmware";
-				reg = <0x070000 0x790000>;
+				reg = <0x070000 0xf20000>;
 				compatible = "denx,uimage";
-			};
-
-			partition@800000 {
-				label = "kernel1";
-				reg = <0x800000 0x790000>;
-				read-only;
 			};
 
 			partition@f90000 {
@@ -104,4 +99,14 @@
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
+};
+
+&art {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_art_0: macaddr@0 {
+		reg = <0x0 0x6>;
+	};
 };

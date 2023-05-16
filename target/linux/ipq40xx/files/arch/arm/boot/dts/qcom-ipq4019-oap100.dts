@@ -27,10 +27,6 @@
 			pinctrl-names = "default";
 		};
 
-		ess-psgmii@98000 {
-			status = "okay";
-		};
-
 		tcsr@1949000 {
 			compatible = "qcom,tcsr";
 			reg = <0x1949000 0x100>;
@@ -95,17 +91,6 @@
 		};
 
 		watchdog@b017000 {
-			status = "okay";
-		};
-
-		ess-switch@c000000 {
-			status = "okay";
-			switch_mac_mode = <0x0>; /* mac mode for RGMII RMII */
-			switch_initvlas = <0x0007c 0x54>; /* port0 status */
-			switch_lan_bmp = <0x10>;
-		};
-
-		edma@c080000 {
 			status = "okay";
 		};
 	};
@@ -278,6 +263,17 @@
 				label = "0:ART";
 				reg = <0x00170000 0x00010000>;
 				read-only;
+				compatible = "nvmem-cells";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				precal_art_1000: precal@1000 {
+					reg = <0x1000 0x2f20>;
+				};
+
+				precal_art_5000: precal@5000 {
+					reg = <0x5000 0x2f20>;
+				};
 			};
 		};
 	};
@@ -318,11 +314,15 @@
 
 &wifi0 {
 	status = "okay";
+	nvmem-cell-names = "pre-calibration";
+	nvmem-cells = <&precal_art_1000>;
 	qcom,ath10k-calibration-variant = "Edgecore OAP100";
 };
 
 &wifi1 {
 	status = "okay";
+	nvmem-cell-names = "pre-calibration";
+	nvmem-cells = <&precal_art_5000>;
 	qcom,ath10k-calibration-variant = "Edgecore OAP100";
 };
 

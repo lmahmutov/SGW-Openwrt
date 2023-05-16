@@ -96,8 +96,6 @@
 &mdio0 {
 	status = "okay";
 
-	phy-mask = <0>;
-
 	phy0: ethernet-phy@0 {
 		reg = <0>;
 		phy-mode = "sgmii";
@@ -118,7 +116,8 @@
 	phy-mode = "sgmii";
 	phy-handle = <&phy0>;
 
-	mtd-mac-address = <&pridata 0x400>;
+	nvmem-cells = <&macaddr_pridata_400>;
+	nvmem-cell-names = "mac-address";
 };
 
 &usb_phy0 {
@@ -126,14 +125,7 @@
 };
 
 &usb0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port0: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &usb_phy1 {
@@ -148,4 +140,14 @@
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
+};
+
+&pridata {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_pridata_400: macaddr@400 {
+		reg = <0x400 0x6>;
+	};
 };

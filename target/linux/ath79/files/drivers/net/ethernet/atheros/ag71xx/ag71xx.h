@@ -65,7 +65,7 @@
 #define AG71XX_TX_RING_SIZE_DEFAULT	128
 #define AG71XX_RX_RING_SIZE_DEFAULT	256
 
-#define AG71XX_TX_RING_SIZE_MAX		128
+#define AG71XX_TX_RING_SIZE_MAX		256
 #define AG71XX_RX_RING_SIZE_MAX		256
 
 #ifdef CONFIG_AG71XX_DEBUG
@@ -178,7 +178,7 @@ struct ag71xx {
 
 	struct phy_device	*phy_dev;
 	void			*phy_priv;
-	int			phy_if_mode;
+	phy_interface_t		phy_if_mode;
 
 	unsigned int		link;
 	unsigned int		speed;

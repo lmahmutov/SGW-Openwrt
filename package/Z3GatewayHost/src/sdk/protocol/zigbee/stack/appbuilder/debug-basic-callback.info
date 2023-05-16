@@ -1,7 +1,0 @@
-#include PLATFORM_HEADER
-#include CONFIGURATION_HEADER
-#include EMBER_AF_API_EMBER_TYPES
-
-void emberDebugHandler(EmberMessageBuffer message)
-{
-}

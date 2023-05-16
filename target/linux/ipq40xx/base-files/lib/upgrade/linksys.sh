@@ -3,7 +3,7 @@ linksys_get_target_firmware() {
 
 	cur_boot_part="$(/usr/sbin/fw_printenv -n boot_part)"
 	if [ -z "${cur_boot_part}" ]; then
-		mtd_ubi0=$(cat /sys/devices/virtual/ubi/ubi0/mtd_num)
+		mtd_ubi0=$(cat /sys/class/ubi/ubi0/mtd_num)
 		case "$(grep -E "^mtd${mtd_ubi0}:" /proc/mtd | cut -d '"' -f 2)" in
 		kernel|rootfs)
 			cur_boot_part=1
@@ -47,8 +47,12 @@ linksys_get_target_firmware() {
 	esac
 }
 
-linksys_get_root_magic() {
-	(get_image "$@" | dd skip=786432 bs=4 count=1 | hexdump -v -n 4 -e '1/1 "%02x"') 2>/dev/null
+linksys_is_factory_image() {
+	local board=$(board_name)
+	board=${board##*,}
+
+	# check matching footer signature
+	tail -c 256 $1 | grep -q -i "\.LINKSYS\.........${board}"
 }
 
 platform_do_upgrade_linksys() {
@@ -96,27 +100,26 @@ platform_do_upgrade_linksys() {
 		fi
 
 		# complete std upgrade
-		nand_upgrade_tar "$1"
+		if nand_upgrade_tar "$1" ; then
+			nand_do_upgrade_success
+		else
+			nand_do_upgrade_failed
+		fi
+
 	}
 
 	[ "$magic_long" = "27051956" ] && {
-		# This magic is for a uImage (which is a sysupgrade image)
-		# check firmwares' rootfs types
-		local oldroot="$(linksys_get_root_magic "$target_mtd")"
-		local newroot="$(linksys_get_root_magic "$1")"
+		echo "writing \"$1\" image to \"$part_label\""
+		get_image "$1" | mtd write - "$part_label"
+	}
 
-		if [ "$newroot" = "55424923" ] && [ "$oldroot" = "55424923" ]; then
-			# we're upgrading from a firmware with UBI to one with UBI
-			# erase everything to be safe
-			# - Is that really needed? Won't remove (or comment) the if,
-			#   because it may be needed in a future device.
-			#mtd erase $part_label
-			#get_image "$1" | mtd -n write - $part_label
-			echo "writing \"$1\" UBI image to \"$part_label\" (UBI)..."
-			get_image "$1" | mtd write - "$part_label"
-		else
-			echo "writing \"$1\" image to \"$part_label\""
-			get_image "$1" | mtd write - "$part_label"
+	[ "$magic_long" = "d00dfeed" ] && {
+		if ! linksys_is_factory_image "$1"; then
+			echo "factory image doesn't match device"
+			return 1
 		fi
+
+		echo "writing \"$1\" factory image to \"$part_label\""
+		get_image "$1" | mtd -e "$part_label" write - "$part_label"
 	}
 }
