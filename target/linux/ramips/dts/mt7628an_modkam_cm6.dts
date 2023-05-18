@@ -1,0 +1,286 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+#include "mt7628an.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "modkam,cm6", "mediatek,mt7628an-soc";
+	model = "Modkam CM6";
+
+	aliases {
+		led-boot = &led_wlan;
+		led-failsafe = &led_wlan;
+		led-upgrade = &led_wlan;
+		label-mac-device = &ethernet;
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 38 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+
+		input_1 {
+			label = "input_1";
+			gpios = <&pcf8575 7 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_1>;
+		};
+
+		/*
+		// PCF8575
+		input_1 {
+			label = "input_1";
+			gpios = <&pcf8575 7 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_1>;
+		};
+
+		input_2 {
+			label = "input_2";
+			gpios = <&pcf8575 6 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_2>;
+		};
+
+		input_3 {
+			label = "input_3";
+			gpios = <&pcf8575 5 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_3>;
+		};
+
+		input_4 {
+			label = "input_4";
+			gpios = <&pcf8575 4 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_4>;
+		};
+
+		input_5 {
+			label = "input_5";
+			gpios = <&pcf8575 3 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_5>;
+		};
+
+		input_6 {
+			label = "input_6";
+			gpios = <&pcf8575 2 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_6>;
+		};
+
+		input_7 {
+			label = "input_7";
+			gpios = <&pcf8575 1 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_7>;
+		};
+
+		input_8 {
+			label = "input_8";
+			gpios = <&pcf8575 0 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_8>;
+		};
+		*/
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_wlan: wlan {
+			label = "green:wlan";
+			gpios = <&gpio 44 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy0tpt";
+		};
+
+		relay_1: relay1 {
+			label = "relay:1";
+			gpios = <&pcf8575 17 GPIO_ACTIVE_HIGH>;
+		};
+	};
+	
+	gpio_export {
+                compatible = "gpio-export";
+                #size-cells = <0>;
+
+                buzzer {
+                        gpio-export,name = "buzzer";
+                        gpio-export,output = <1>;
+                        gpios = <&gpio 41 GPIO_ACTIVE_HIGH>;
+                };
+
+                zigbee_rst {
+                        gpio-export,name = "zigbee_rst";
+                        gpio-export,output = <1>;
+                        gpios = <&gpio 0 GPIO_ACTIVE_HIGH>;
+                };
+/*
+		//PCF8575
+                relay_1 {
+                        gpio-export,name = "relay_1";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 17 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_2 {
+                        gpio-export,name = "relay_2";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 16 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_3 {
+                        gpio-export,name = "relay_3";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 15 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_4 {
+                        gpio-export,name = "relay_4";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 14 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_5 {
+                        gpio-export,name = "relay_5";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 13 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_6 {
+                        gpio-export,name = "relay_6";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 12 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_7 {
+                        gpio-export,name = "relay_7";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 11 GPIO_ACTIVE_HIGH>;
+                };
+
+                relay_8 {
+                        gpio-export,name = "relay_8";
+                        gpio-export,output = <0>;
+                        gpios = <&pcf8575 10 GPIO_ACTIVE_HIGH>;
+                };
+*/
+        };
+};
+
+&state_default {
+	gpio {
+		groups = "i2s", "refclk", "wdt", "p4led_an", "p2led_an", "p1led_an", "p0led_an", "wled_an";
+		function = "gpio";
+	};
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&i2c {
+	status = "okay";
+	
+	pcf8563: rtc@51 {
+		status = "okay";
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
+
+	pcf8575: gpio@27 {
+                compatible = "nxp,pcf8575";
+                reg = <0x27>;
+                gpio-controller;
+                #gpio-cells = <2>;
+		lines-initial-states = <0xff00>;
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_pins>, <&spi_cs1_pins>;
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <40000000>;
+		broken-flash-reset;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x30000>;
+				read-only;
+			};
+
+			partition@30000 {
+				label = "u-boot-env";
+				reg = <0x30000 0x10000>;
+				read-only;
+			};
+
+			factory: partition@40000 {
+				label = "factory";
+				reg = <0x40000 0x10000>;
+				read-only;
+			};
+
+			partition@50000 {
+				compatible = "denx,uimage";
+				label = "firmware";
+				reg = <0x50000 0x1fb0000>;
+			};
+		};
+	};
+
+	st7735r@1 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "okay";
+		compatible = "sitronix,st7735r";
+		reg = <1 0>;
+		spi-max-frequency = <32000000>;
+		fps = <30>;
+		buswidth = <8>;
+		rotate = <270>;
+		dc-gpios = <&gpio 2 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
+		led-gpios = <&gpio 1 GPIO_ACTIVE_HIGH>;
+		debug = <0x0>;
+	};
+};
+
+&ethernet {
+	nvmem-cells = <&macaddr_factory_28>;
+	nvmem-cell-names = "mac-address";
+};
+
+&esw {
+	mediatek,portmap = <0x3e>;
+};
+
+&sdhci {
+	status = "okay";
+	mediatek,cd-low;
+};
+
+&wmac {
+	status = "okay";
+
+	mediatek,mtd-eeprom = <&factory 0x0>;
+};
+
+&factory {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	macaddr_factory_28: macaddr@28 {
+		reg = <0x28 0x6>;
+	};
+};

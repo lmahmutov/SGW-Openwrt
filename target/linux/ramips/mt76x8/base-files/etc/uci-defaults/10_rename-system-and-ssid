@@ -1,0 +1,36 @@
+#
+# Copyright (C) 2023 @lmahmutov
+#
+
+. /lib/functions.sh
+
+cm6() {
+	name="Modkam-CM6"
+	uci set wireless.@wifi-iface[0].ssid=${name}
+	uci set wireless.radio0.disabled='0'
+	uci commit wireless
+	uci set system.@system[0].hostname=${name}
+	uci commit system
+	wifi
+}
+
+homed() {
+	name="HOMEd-PICO"
+	uci set wireless.@wifi-iface[0].ssid=${name}
+	uci set wireless.radio0.disabled='0'
+	uci commit wireless
+	uci set system.@system[0].hostname=${name}
+	uci commit system
+	wifi
+}
+
+board=$(board_name)
+
+case "$board" in
+modkam,cm6)
+	cm6
+	;;
+homed,pico)
+	homed
+	;;
+esac

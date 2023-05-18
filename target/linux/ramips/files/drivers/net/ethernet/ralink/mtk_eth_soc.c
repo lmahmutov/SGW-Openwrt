@@ -1561,9 +1561,7 @@ static int fe_probe(struct platform_device *pdev)
 	struct clk *sysclk;
 	int err, napi_weight;
 
-	err = device_reset(&pdev->dev);
-	if (err)
-		dev_err(&pdev->dev, "failed to reset device\n");
+	device_reset(&pdev->dev);
 
 	match = of_match_device(of_fe_match, &pdev->dev);
 	soc = (struct fe_soc_data *)match->data;

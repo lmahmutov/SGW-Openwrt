@@ -18,7 +18,7 @@
 
 	keys {
 		compatible = "gpio-keys-polled";
-		poll-interval = <100>;
+		poll-interval = <20>;
 
 		reset {
 			label = "reset";
@@ -29,7 +29,7 @@
 	};
 
 	bcm43225-sprom {
-		compatible = "brcm,bcma-sprom";
+		compatible = "brcm,bcm43225-sprom";
 
 		pci-bus = <1>;
 		pci-dev = <0>;
@@ -38,7 +38,6 @@
 		nvmem-cell-names = "mac-address";
 		mac-address-increment = <1>;
 
-		brcm,sprom = "brcm/bcm43225-sprom.bin";
 		brcm,sprom-fixups = <2 0x05bb>,
 				    <65 0x1204>,
 				    <78 0x0303>,
@@ -171,7 +170,6 @@
 			label = "lan1";
 
 			phy-handle = <&phy1>;
-			phy-mode = "mii";
 		};
 
 		port@1 {
@@ -179,7 +177,6 @@
 			label = "lan2";
 
 			phy-handle = <&phy2>;
-			phy-mode = "mii";
 		};
 
 		port@2 {
@@ -187,7 +184,6 @@
 			label = "lan3";
 
 			phy-handle = <&phy3>;
-			phy-mode = "mii";
 		};
 
 		port@3 {
@@ -195,7 +191,6 @@
 			label = "lan4";
 
 			phy-handle = <&phy4>;
-			phy-mode = "mii";
 		};
 	};
 };

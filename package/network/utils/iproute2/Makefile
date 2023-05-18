@@ -8,18 +8,16 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=iproute2
-PKG_VERSION:=6.3.0
-PKG_RELEASE:=1
+PKG_VERSION:=5.15.0
+PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/utils/net/iproute2
-PKG_HASH:=dfb2a98db96e7a653cffc6693335a1a466e29a34b6ac528be48f35e1d2766732
+PKG_HASH:=38e3e4a5f9a7f5575c015027a10df097c149111eeb739993128e5b2b35b291ff
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=iptables
 PKG_LICENSE:=GPL-2.0
 PKG_CPE_ID:=cpe:/a:iproute2_project:iproute2
-
-PKG_BUILD_FLAGS:=gc-sections lto
 
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
@@ -173,7 +171,8 @@ define Build/Configure
 		> $(PKG_BUILD_DIR)/include/SNAPSHOT.h
 endef
 
-TARGET_LDFLAGS += -Wl,--as-needed
+TARGET_CFLAGS += -ffunction-sections -fdata-sections -flto
+TARGET_LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
 TARGET_CPPFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
 
 MAKE_FLAGS += \
@@ -185,7 +184,6 @@ MAKE_FLAGS += \
 	HAVE_ELF=$(HAVE_ELF) \
 	HAVE_MNL=$(HAVE_MNL) \
 	HAVE_CAP=$(HAVE_CAP) \
-	HAVE_TIRPC=n \
 	IPT_LIB_DIR=/usr/lib/iptables \
 	XT_LIB_DIR=/usr/lib/iptables \
 	TC_CONFIG_XT=$(TC_CONFIG_XT) \

@@ -17,7 +17,6 @@ HOST_BUILD_DEPENDS:=libsepol/host pcre/host
 PKG_LICENSE:=libselinux-1.0
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Thomas Petazzoni <thomas.petazzoni@bootlin.com>
-PKG_CPE_ID:=cpe:/a:selinuxproject:libselinux
 
 HOST_BUILD_DEPENDS:=libsepol/host musl-fts/host pcre/host
 
@@ -115,7 +114,6 @@ HOST_MAKE_FLAGS += \
 
 ifeq ($(CONFIG_USE_MUSL),y)
 MAKE_FLAGS += FTS_LDLIBS=-lfts
-TARGET_CFLAGS += -D_LARGEFILE64_SOURCE
 endif
 
 MAKE_FLAGS += \

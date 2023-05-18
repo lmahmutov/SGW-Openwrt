@@ -35,16 +35,6 @@ define U-Boot/nanopi-r2s-rk3328
   OF_PLATDATA:=$(1)
 endef
 
-define U-Boot/roc-cc-rk3328
-  BUILD_SUBTARGET:=armv8
-  NAME:=ROC-RK3328-CC
-  BUILD_DEVICES:= \
-    firefly_roc-rk3328-cc
-  DEPENDS:=+PACKAGE_u-boot-roc-cc-rk3328:arm-trusted-firmware-rockchip
-  PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip
-  ATF:=rk3328_bl31.elf
-  OF_PLATDATA:=$(1)
-endef
 
 # RK3399 boards
 
@@ -82,8 +72,7 @@ UBOOT_TARGETS := \
   nanopi-r4s-rk3399 \
   rock-pi-4-rk3399 \
   rockpro64-rk3399 \
-  nanopi-r2s-rk3328 \
-  roc-cc-rk3328
+  nanopi-r2s-rk3328
 
 UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 
@@ -103,6 +92,7 @@ ifneq ($(OF_PLATDATA),)
 endif
 
 	$(SED) 's#CONFIG_MKIMAGE_DTC_PATH=.*#CONFIG_MKIMAGE_DTC_PATH="$(PKG_BUILD_DIR)/scripts/dtc/dtc"#g' $(PKG_BUILD_DIR)/.config
+	echo 'CONFIG_IDENT_STRING=" OpenWrt"' >> $(PKG_BUILD_DIR)/.config
 endef
 
 define Build/InstallDev
