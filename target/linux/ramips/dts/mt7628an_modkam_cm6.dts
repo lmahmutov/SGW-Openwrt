@@ -24,63 +24,6 @@
 			gpios = <&gpio 38 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RESTART>;
 		};
-
-		input_1 {
-			label = "input_1";
-			gpios = <&pcf8575 7 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_1>;
-		};
-
-		/*
-		// PCF8575
-		input_1 {
-			label = "input_1";
-			gpios = <&pcf8575 7 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_1>;
-		};
-
-		input_2 {
-			label = "input_2";
-			gpios = <&pcf8575 6 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_2>;
-		};
-
-		input_3 {
-			label = "input_3";
-			gpios = <&pcf8575 5 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_3>;
-		};
-
-		input_4 {
-			label = "input_4";
-			gpios = <&pcf8575 4 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_4>;
-		};
-
-		input_5 {
-			label = "input_5";
-			gpios = <&pcf8575 3 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_5>;
-		};
-
-		input_6 {
-			label = "input_6";
-			gpios = <&pcf8575 2 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_6>;
-		};
-
-		input_7 {
-			label = "input_7";
-			gpios = <&pcf8575 1 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_7>;
-		};
-
-		input_8 {
-			label = "input_8";
-			gpios = <&pcf8575 0 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_8>;
-		};
-		*/
 	};
 
 	leds {
@@ -90,11 +33,6 @@
 			label = "green:wlan";
 			gpios = <&gpio 44 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
-		};
-
-		relay_1: relay1 {
-			label = "relay:1";
-			gpios = <&pcf8575 17 GPIO_ACTIVE_HIGH>;
 		};
 	};
 	
@@ -113,56 +51,6 @@
                         gpio-export,output = <1>;
                         gpios = <&gpio 0 GPIO_ACTIVE_HIGH>;
                 };
-/*
-		//PCF8575
-                relay_1 {
-                        gpio-export,name = "relay_1";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 17 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_2 {
-                        gpio-export,name = "relay_2";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 16 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_3 {
-                        gpio-export,name = "relay_3";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 15 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_4 {
-                        gpio-export,name = "relay_4";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 14 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_5 {
-                        gpio-export,name = "relay_5";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 13 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_6 {
-                        gpio-export,name = "relay_6";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 12 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_7 {
-                        gpio-export,name = "relay_7";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 11 GPIO_ACTIVE_HIGH>;
-                };
-
-                relay_8 {
-                        gpio-export,name = "relay_8";
-                        gpio-export,output = <0>;
-                        gpios = <&pcf8575 10 GPIO_ACTIVE_HIGH>;
-                };
-*/
         };
 };
 
@@ -187,11 +75,10 @@
 	};
 
 	pcf8575: gpio@27 {
-                compatible = "nxp,pcf8575";
+                compatible = "ti,pcf8575";
                 reg = <0x27>;
                 gpio-controller;
                 #gpio-cells = <2>;
-		lines-initial-states = <0xff00>;
 	};
 };
 

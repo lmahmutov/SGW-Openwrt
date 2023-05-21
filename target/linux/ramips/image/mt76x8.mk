@@ -346,7 +346,8 @@ define Device/modkam_cm6
   DEVICE_VENDOR := Modkam
   DEVICE_MODEL := CM6
   DEVICE_PACKAGES:= kmod-usb2 kmod-usb-ohci kmod-sdhci-mt7620 \
-	libatomic libstdcpp kmod-gpio-pcf857x kmod-rtc-pcf-8563
+	kmod-i2c-core kmod-i2c-mt7628 kmod-i2c-algo-bit kmod-i2c-gpio \
+	libatomic libstdcpp kmod-gpio-pcf857x kmod-rtc-pcf8563
 endef
 TARGET_DEVICES += modkam_cm6
 
